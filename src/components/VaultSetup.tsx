@@ -69,16 +69,12 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
     }
 
     try {
-      console.log('Creating vault...');
       // Pass backend config only if provided
       const config = await createVault(
         backendUrl || undefined,
         apiKey || undefined
       );
-      console.log('Vault created:', config);
-      console.log('Calling onComplete...');
       onComplete(config.vaultId, password);
-      console.log('onComplete called');
     } catch (err) {
       setError('Failed to create vault. Please try again.');
       console.error('Vault creation error:', err);
@@ -125,14 +121,12 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
         // Vault doesn't exist OR vault is empty (new vault)
         // This is actually okay - they might be connecting to a vault that hasn't synced yet
         // Let them proceed to password entry
-        console.log('No cloud data found for vault, proceeding to password verification');
         setVaultVerified(true);
         setCheckingVault(false);
         return;
       }
 
       // Vault exists with data - proceed to password verification
-      console.log('Vault found in cloud, proceeding to password verification');
       setVaultVerified(true);
       setCheckingVault(false);
     } catch (err) {
@@ -161,9 +155,7 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
 
     try {
       // Fetch encrypted data to verify password
-      console.log('[VaultSetup] Fetching data from cloud to verify password...');
       const response = await syncFromCloud(vaultId.trim());
-      console.log('[VaultSetup] Sync response:', { success: response.success, hasData: !!response.data, error: response.error });
       
       if (!response.success) {
         // Check specific error types
@@ -188,15 +180,13 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
 
       // Try to decrypt with the provided password
       try {
-        console.log('[VaultSetup] Attempting to decrypt data...');
         await decrypt(response.data, password);
-        console.log('[VaultSetup] Decryption successful!');
         // Password is correct - set up the vault
         await setupExistingVault(vaultId.trim(), backendUrl, apiKey);
         onComplete(vaultId.trim(), password);
       } catch (decryptError) {
         // Password is incorrect
-        console.error('[VaultSetup] Decryption failed:', decryptError);
+        console.error('Decryption failed:', decryptError);
         setError('Incorrect password. Please try again.');
         setVerifying(false);
       }

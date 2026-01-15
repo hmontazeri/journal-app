@@ -36,60 +36,45 @@ function App() {
 
   // Handle vault setup completion
   const handleVaultSetup = async (vaultId: string, userPassword: string) => {
-    console.log('[handleVaultSetup] Called with vaultId:', vaultId);
     setPassword(userPassword);
     // Reset sync tracking for new vault
     resetSyncTracking();
     // Reload vault config to pick up the newly created vault
-    console.log('[handleVaultSetup] Reloading vault config...');
     await reloadVault();
-    console.log('[handleVaultSetup] Vault config reloaded');
     
     // Try to sync from cloud (in case this is an existing vault)
     // We need to manually check because vaultConfig state may not have updated yet
-    console.log('[handleVaultSetup] Attempting to sync from cloud for vaultId:', vaultId);
     try {
       const response = await syncFromCloud(vaultId);
-      console.log('[handleVaultSetup] Cloud sync response:', { success: response.success, hasData: !!response.data });
       
       if (response.success && response.data) {
         const decrypted = await decrypt(response.data, userPassword);
         const cloudData: JournalData = JSON.parse(decrypted);
-        console.log('[handleVaultSetup] Decrypted cloud data, entry count:', Object.keys(cloudData.entries).length);
         
         // Save to local storage
         await saveLocalJournalData(cloudData);
         markAsSynced(cloudData);
-        console.log('[handleVaultSetup] Saved cloud data to localStorage');
       } else {
-        console.log('[handleVaultSetup] No cloud data found (new vault)');
       }
     } catch (error) {
       console.error('[handleVaultSetup] Sync failed, continuing anyway:', error);
       // Continue even if sync fails (might be a new vault with no data)
     }
     
-    console.log('[handleVaultSetup] Unlocking...');
     unlock();
-    console.log('[handleVaultSetup] Reloading journal data from localStorage...');
     // Reload journal data after vault is created
     await reload();
-    console.log('[handleVaultSetup] Complete');
   };
 
   // Handle password unlock
   const handleUnlock = async (userPassword: string) => {
-    console.log('[handleUnlock] Starting unlock process');
-    console.log('[handleUnlock] Current journal data entry count:', journalData ? Object.keys(journalData.entries).length : 'null');
     setUnlockError('');
     setPassword(userPassword);
     
     // Try to sync from cloud BEFORE unlocking
     if (vaultConfig) {
       try {
-        console.log('[handleUnlock] Syncing from cloud...');
         await syncJournalData(userPassword, true);
-        console.log('[handleUnlock] Sync complete');
         
         // Wait a tiny bit for React state to update
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -97,24 +82,19 @@ function App() {
         // Force a re-render to ensure UI updates with new data
         setForceUpdate(prev => prev + 1);
         
-        console.log('[handleUnlock] After sync, journal data entry count:', journalData ? Object.keys(journalData.entries).length : 'null');
-        
         // Only unlock after data is synced (or if no data exists in cloud)
         unlock();
-        console.log('[handleUnlock] Unlock complete');
       } catch (error: any) {
-        console.error('[handleUnlock] Failed to sync during unlock:', error);
+        console.error('Failed to sync during unlock:', error);
         // Don't unlock if decryption failed (wrong password)
         if (error?.message === 'Decryption failed') {
           setPassword(null); // Clear the wrong password
           return;
         }
         // Still unlock even if sync fails for other reasons (offline mode, network error, etc.)
-        console.log('[handleUnlock] Unlocking despite sync error (offline mode)');
         unlock();
       }
     } else {
-      console.log('[handleUnlock] No vault config, unlocking directly');
       unlock();
     }
   };
@@ -193,20 +173,16 @@ function App() {
     try {
       if (fromCloud) {
         // Sync from cloud
-        console.log('Syncing from cloud for vault:', vaultConfig.vaultId);
         const response = await syncFromCloud(vaultConfig.vaultId);
-        console.log('Cloud sync response:', { success: response.success, hasData: !!response.data });
         
         if (response.success && response.data) {
           try {
             const decrypted = await decrypt(response.data, userPassword);
             const cloudData: JournalData = JSON.parse(decrypted);
-            console.log('Decrypted cloud data, entry count:', Object.keys(cloudData.entries).length);
             
             // Merge with local data (newer wins)
             const localData = await getLocalJournalData();
             if (localData) {
-              console.log('Merging with local data, entry count:', Object.keys(localData.entries).length);
               const mergedEntries = { ...cloudData.entries };
               Object.keys(localData.entries).forEach((date) => {
                 const localEntry = localData.entries[date];
@@ -229,14 +205,11 @@ function App() {
               markAsSynced(mergedData);
               await reload();
               setSyncError(null); // Clear any previous errors
-              console.log('Successfully merged and loaded data');
             } else {
-              console.log('No local data, using cloud data directly');
               await saveLocalJournalData(cloudData);
               markAsSynced(cloudData);
               await reload();
               setSyncError(null); // Clear any previous errors
-              console.log('Successfully loaded cloud data');
             }
           } catch (error) {
             console.error('Failed to decrypt cloud data:', error);
@@ -244,7 +217,6 @@ function App() {
             throw new Error('Decryption failed');
           }
         } else {
-          console.log('No cloud data found for this vault');
           setSyncError(null); // Clear errors if no data to sync
         }
       } else {

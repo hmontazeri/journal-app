@@ -77,6 +77,10 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Create .env.local with API key
+        run: echo "VITE_API_KEY=${{ secrets.VITE_API_KEY }}" > .env.local
+        shell: bash
+
       - name: Build frontend
         run: npm run build
 

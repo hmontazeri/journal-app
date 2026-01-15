@@ -9,11 +9,12 @@ interface JournalEntryProps {
   entry: JournalEntry;
   onSave: (entry: JournalEntry) => void;
   onSync?: () => void;
+  allTags?: string[]; // All existing tags from all entries
 }
 
 const MOOD_SCALES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export function JournalEntryComponent({ entry, onSave, onSync }: JournalEntryProps) {
+export function JournalEntryComponent({ entry, onSave, onSync, allTags = [] }: JournalEntryProps) {
   const [title, setTitle] = useState(entry.title);
   const [tags, setTags] = useState<string[]>(entry.tags);
   const [tagInput, setTagInput] = useState('');
@@ -21,7 +22,10 @@ export function JournalEntryComponent({ entry, onSave, onSync }: JournalEntryPro
   const [energyDrained, setEnergyDrained] = useState(entry.energyDrained || '');
   const [energyGained, setEnergyGained] = useState(entry.energyGained || '');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tagInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -139,24 +143,83 @@ export function JournalEntryComponent({ entry, onSave, onSync }: JournalEntryPro
     }, true); // Sync on energy field change
   };
 
+  // Filter tag suggestions based on input
+  const tagSuggestions = tagInput.trim()
+    ? allTags
+        .filter(tag => 
+          tag.toLowerCase().includes(tagInput.toLowerCase()) &&
+          !tags.includes(tag)
+        )
+        .slice(0, 5) // Limit to 5 suggestions
+    : [];
+
+  const addTag = (tag: string) => {
+    const newTags = [...tags, tag.trim()].filter(
+      (t, index, self) => self.indexOf(t) === index
+    );
+    setTags(newTags);
+    setTagInput('');
+    setShowTagSuggestions(false);
+    setSelectedSuggestionIndex(0);
+    handleSave({
+      ...entry,
+      title,
+      content: editor?.getHTML() || '',
+      tags: newTags,
+      mood: { scale: moodScale },
+      energyDrained,
+      energyGained,
+    }, true); // Sync on tag creation
+    
+    // Focus back on input
+    tagInputRef.current?.focus();
+  };
+
   const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Handle arrow keys for navigation
+    if (showTagSuggestions && tagSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev < tagSuggestions.length - 1 ? prev + 1 : 0
+        );
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : tagSuggestions.length - 1
+        );
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        addTag(tagSuggestions[selectedSuggestionIndex]);
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && tagInput.trim()) {
       e.preventDefault();
-      const newTags = [...tags, tagInput.trim()].filter(
-        (tag, index, self) => self.indexOf(tag) === index
-      );
-      setTags(newTags);
-      setTagInput('');
-      handleSave({
-        ...entry,
-        title,
-        content: editor?.getHTML() || '',
-        tags: newTags,
-        mood: { scale: moodScale },
-        energyDrained,
-        energyGained,
-      }, true); // Sync on tag creation
+      // If suggestions are shown and one is selected, use it
+      if (showTagSuggestions && tagSuggestions.length > 0) {
+        addTag(tagSuggestions[selectedSuggestionIndex]);
+      } else {
+        // Otherwise, add the typed tag
+        addTag(tagInput);
+      }
     }
+
+    if (e.key === 'Escape') {
+      setShowTagSuggestions(false);
+      setSelectedSuggestionIndex(0);
+    }
+  };
+
+  const handleTagInputChange = (value: string) => {
+    setTagInput(value);
+    setShowTagSuggestions(value.trim().length > 0);
+    setSelectedSuggestionIndex(0);
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
@@ -251,14 +314,33 @@ export function JournalEntryComponent({ entry, onSave, onSync }: JournalEntryPro
                   <button onClick={() => handleRemoveTag(tag)}>×</button>
                 </span>
               ))}
-              <input
-                type="text"
-                className="tag-input"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleAddTag}
-                placeholder="Add tag (press Enter)"
-              />
+              <div className="tag-input-wrapper">
+                <input
+                  ref={tagInputRef}
+                  type="text"
+                  className="tag-input"
+                  value={tagInput}
+                  onChange={(e) => handleTagInputChange(e.target.value)}
+                  onKeyDown={handleAddTag}
+                  onFocus={() => tagInput.trim() && setShowTagSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)}
+                  placeholder="Add tag (press Enter)"
+                />
+                {showTagSuggestions && tagSuggestions.length > 0 && (
+                  <div className="tag-suggestions">
+                    {tagSuggestions.map((suggestion, index) => (
+                      <div
+                        key={suggestion}
+                        className={`tag-suggestion ${index === selectedSuggestionIndex ? 'selected' : ''}`}
+                        onClick={() => addTag(suggestion)}
+                        onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                      >
+                        {suggestion}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -451,6 +533,49 @@ export function JournalEntryComponent({ entry, onSave, onSync }: JournalEntryPro
           flex-wrap: wrap;
           gap: 0.5rem;
           align-items: center;
+        }
+
+        .tag-input-wrapper {
+          position: relative;
+          flex: 1;
+          min-width: 200px;
+        }
+
+        .tag-suggestions {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          margin-top: 0.25rem;
+          background: var(--bg-primary);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          box-shadow: 0 4px 12px var(--shadow);
+          max-height: 200px;
+          overflow-y: auto;
+          z-index: 10;
+        }
+
+        .tag-suggestion {
+          padding: 0.625rem 0.75rem;
+          cursor: pointer;
+          color: var(--text-primary);
+          font-size: 0.9375rem;
+          transition: background 0.15s;
+        }
+
+        .tag-suggestion:hover,
+        .tag-suggestion.selected {
+          background: rgba(var(--accent-rgb), 0.1);
+          color: var(--accent);
+        }
+
+        .tag-suggestion:first-child {
+          border-radius: 8px 8px 0 0;
+        }
+
+        .tag-suggestion:last-child {
+          border-radius: 0 0 8px 8px;
         }
 
         .tag {

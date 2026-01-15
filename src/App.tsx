@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useVault } from './hooks/useVault';
 import { useJournal } from './hooks/useJournal';
 import { VaultSetup } from './components/VaultSetup';
@@ -270,6 +270,16 @@ function App() {
     return journalData?.entries[date] !== undefined;
   };
 
+  // Extract all unique tags from all entries for autocomplete
+  const allTags = useMemo(() => {
+    if (!journalData) return [];
+    const tagSet = new Set<string>();
+    Object.values(journalData.entries).forEach(entry => {
+      entry.tags.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }, [journalData]);
+
   return (
     <div className="app">
       {(syncError || isOffline) && (
@@ -311,6 +321,7 @@ function App() {
             entry={currentEntry}
             onSave={saveEntry}
             onSync={() => password && syncJournalData(password)}
+            allTags={allTags}
           />
         ) : (
           <InsightsView />

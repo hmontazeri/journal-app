@@ -1,6 +1,6 @@
 [package]
 name = "journal"
-version = "0.1.2"
+version = "0.1.3"
 description = "A beautiful minimalist daily journaling app"
 authors = ["hamedmontazeri"]
 edition = "2021"

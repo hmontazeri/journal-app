@@ -49,15 +49,16 @@ git push origin main --tags
 ## How It Works
 
 1. **npm version command**: When you run `npm version patch/minor/major`, npm:
+   - Runs `preversion` script (checks versions are synced)
    - Updates `package.json`
-   - Runs the `postversion` script
-   - Creates a git commit
+   - Runs the `version` script
+   - Creates a git commit (including all staged files)
    - Creates a git tag
 
-2. **postversion script**: Automatically syncs the version from `package.json` to:
+2. **version script**: Automatically syncs the version from `package.json` to:
    - `src-tauri/Cargo.toml`
    - `src-tauri/tauri.conf.json`
-   - Stages these files in git
+   - Stages these files so they're included in the version commit
 
 3. **GitHub Actions**: When you push a tag:
    - The release workflow builds for all platforms

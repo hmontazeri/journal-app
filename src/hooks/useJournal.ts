@@ -15,11 +15,14 @@ export function useJournal() {
   }, []);
 
   const loadJournalData = async () => {
+    console.log('[useJournal] Loading journal data...');
     try {
       const data = await getLocalJournalData();
       if (data) {
+        console.log('[useJournal] Loaded data from localStorage, entry count:', Object.keys(data.entries).length);
         setJournalData(data);
       } else {
+        console.log('[useJournal] No data in localStorage, initializing empty journal');
         // Initialize empty journal
         const newData: JournalData = {
           entries: {},
@@ -33,7 +36,7 @@ export function useJournal() {
         await saveLocalJournalData(newData);
       }
     } catch (error) {
-      console.error('Failed to load journal data:', error);
+      console.error('[useJournal] Failed to load journal data:', error);
     } finally {
       setLoading(false);
     }

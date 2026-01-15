@@ -26,6 +26,7 @@ function App() {
   const [view, setView] = useState<'journal' | 'insights'>('journal');
   const [showHistoryOverlay, setShowHistoryOverlay] = useState(false);
   const [showUserInfo, setShowUserInfo] = useState(false);
+  const [, setForceUpdate] = useState(0);
 
   // Check if vault exists and is unlocked
   const needsVaultSetup = !vaultConfig && !vaultLoading;
@@ -48,26 +49,42 @@ function App() {
 
   // Handle password unlock
   const handleUnlock = async (userPassword: string) => {
+    console.log('[handleUnlock] Starting unlock process');
+    console.log('[handleUnlock] Current journal data entry count:', journalData ? Object.keys(journalData.entries).length : 'null');
     setUnlockError('');
     setPassword(userPassword);
     
     // Try to sync from cloud BEFORE unlocking
     if (vaultConfig) {
       try {
+        console.log('[handleUnlock] Syncing from cloud...');
         await syncJournalData(userPassword, true);
+        console.log('[handleUnlock] Sync complete');
+        
+        // Wait a tiny bit for React state to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Force a re-render to ensure UI updates with new data
+        setForceUpdate(prev => prev + 1);
+        
+        console.log('[handleUnlock] After sync, journal data entry count:', journalData ? Object.keys(journalData.entries).length : 'null');
+        
         // Only unlock after data is synced (or if no data exists in cloud)
         unlock();
+        console.log('[handleUnlock] Unlock complete');
       } catch (error: any) {
-        console.error('Failed to sync during unlock:', error);
+        console.error('[handleUnlock] Failed to sync during unlock:', error);
         // Don't unlock if decryption failed (wrong password)
         if (error?.message === 'Decryption failed') {
           setPassword(null); // Clear the wrong password
           return;
         }
         // Still unlock even if sync fails for other reasons (offline mode, network error, etc.)
+        console.log('[handleUnlock] Unlocking despite sync error (offline mode)');
         unlock();
       }
     } else {
+      console.log('[handleUnlock] No vault config, unlocking directly');
       unlock();
     }
   };

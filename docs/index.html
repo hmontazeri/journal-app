@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Journal - A Beautiful Minimalist Daily Journaling App</title>
+  <meta name="description" content="A beautiful, minimalist macOS app for daily journaling with mood tracking, tags, and secure cloud sync.">
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f5;
+      --text-primary: #1a1a1a;
+      --text-secondary: #4a4a4a;
+      --accent: #d4a574;
+      --border: #e0e0e0;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --font-serif: 'Iowan Old Style', 'Charter', 'Georgia', 'Times New Roman', serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', 'Roboto', sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #2a2a2a;
+        --text-primary: #f5f5f5;
+        --text-secondary: #b0b0b0;
+        --border: #404040;
+        --shadow: rgba(0, 0, 0, 0.3);
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: 3rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    .subtitle {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+    }
+
+    .download-section {
+      text-align: center;
+      margin: 3rem 0;
+    }
+
+    .download-button {
+      display: inline-block;
+      padding: 1rem 2rem;
+      background: var(--accent);
+      color: var(--bg-primary);
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 1.125rem;
+      transition: opacity 0.2s;
+      margin: 0.5rem;
+    }
+
+    .download-button:hover {
+      opacity: 0.9;
+    }
+
+    .download-button.secondary {
+      background: transparent;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+    }
+
+    .version-display {
+      margin-bottom: 2rem;
+    }
+
+    .version-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .version-number {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      font-weight: 400;
+      color: var(--text-primary);
+    }
+
+    .download-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .platform-button {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text-primary);
+      transition: all 0.2s;
+      min-width: 140px;
+    }
+
+    .platform-button:hover {
+      border-color: var(--accent);
+      background: var(--bg-primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+
+    .platform-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .platform-name {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .platform-arch {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .loading-text {
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin: 4rem 0;
+    }
+
+    .feature {
+      padding: 2rem;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .feature h3 {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 400;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    .feature p {
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .screenshot {
+      text-align: center;
+      margin: 4rem 0;
+    }
+
+    .screenshot img {
+      max-width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    .version-info {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2rem;
+      }
+
+      .subtitle {
+        font-size: 1rem;
+      }
+
+      .container {
+        padding: 2rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Journal</h1>
+      <p class="subtitle">A beautiful, minimalist daily journaling app for macOS</p>
+    </header>
+
+    <div class="download-section">
+      <div class="version-display">
+        <p class="version-label">Latest Version</p>
+        <p class="version-number" id="version-number">Loading...</p>
+      </div>
+      <div class="download-buttons" id="download-buttons">
+        <p class="loading-text">Loading downloads...</p>
+      </div>
+      <a href="https://github.com/hmontazeri/journal-app" class="download-button secondary" id="github-link">
+        View on GitHub
+      </a>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <h3>Beautiful Design</h3>
+        <p>Minimalist interface with elegant typography and thoughtful spacing. Designed to be a joy to use every day.</p>
+      </div>
+
+      <div class="feature">
+        <h3>Rich Text Editing</h3>
+        <p>WYSIWYG editor with formatting options. Write naturally and focus on your thoughts, not the tool.</p>
+      </div>
+
+      <div class="feature">
+        <h3>Mood Tracking</h3>
+        <p>Track your daily mood with a simple scale. Reflect on what energized you and what drained your energy.</p>
+      </div>
+
+      <div class="feature">
+        <h3>Tags & Organization</h3>
+        <p>Organize your entries with tags. Find patterns and insights in your journaling journey.</p>
+      </div>
+
+      <div class="feature">
+        <h3>Secure Cloud Sync</h3>
+        <p>Your data is encrypted client-side before syncing. Access your journal from multiple devices securely.</p>
+      </div>
+
+      <div class="feature">
+        <h3>Insights & Statistics</h3>
+        <p>View your journaling statistics, mood trends, and patterns over time. Understand yourself better.</p>
+      </div>
+    </div>
+
+    <footer>
+      <p>Made with care for thoughtful journaling</p>
+      <p class="version-info">Open source • Built with Tauri & React</p>
+      <p style="margin-top: 1rem;">
+        <a href="https://github.com/hmontazeri/journal-app" id="footer-github">GitHub</a> • 
+        <a href="https://github.com/hmontazeri/journal-app/releases" id="footer-releases">Releases</a> • 
+        <a href="https://github.com/hmontazeri/journal-app/issues" id="footer-issues">Issues</a>
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    // Fetch latest release info and create download buttons
+    fetch('https://api.github.com/repos/hmontazeri/journal-app/releases/latest')
+      .then(response => response.json())
+      .then(data => {
+        if (data.tag_name && data.assets) {
+          // Display version
+          const versionEl = document.getElementById('version-number');
+          if (versionEl) {
+            versionEl.textContent = data.tag_name;
+          }
+
+          // Create download buttons for each platform
+          const buttonsContainer = document.getElementById('download-buttons');
+          if (buttonsContainer) {
+            buttonsContainer.innerHTML = '';
+
+            // Map assets to platforms
+            const platforms = {
+              'dmg': { name: 'macOS', icon: '🍎', arch: [] },
+              'msi': { name: 'Windows', icon: '🪟', arch: [] },
+              'AppImage': { name: 'Linux', icon: '🐧', arch: [] }
+            };
+
+            // Group assets by platform
+            data.assets.forEach(asset => {
+              const name = asset.name.toLowerCase();
+              if (name.includes('.dmg')) {
+                const arch = name.includes('aarch64') ? 'Apple Silicon' : name.includes('x64') ? 'Intel' : '';
+                platforms['dmg'].arch.push({ url: asset.browser_download_url, arch, name: asset.name });
+              } else if (name.includes('.msi')) {
+                platforms['msi'].arch.push({ url: asset.browser_download_url, arch: '', name: asset.name });
+              } else if (name.includes('.appimage')) {
+                platforms['AppImage'].arch.push({ url: asset.browser_download_url, arch: '', name: asset.name });
+              }
+            });
+
+            // Create buttons
+            Object.entries(platforms).forEach(([ext, platform]) => {
+              if (platform.arch.length > 0) {
+                platform.arch.forEach((item, index) => {
+                  const button = document.createElement('a');
+                  button.href = item.url;
+                  button.className = 'platform-button';
+                  button.download = true;
+                  
+                  button.innerHTML = `
+                    <span class="platform-icon">${platform.icon}</span>
+                    <span class="platform-name">${platform.name}</span>
+                    ${item.arch ? `<span class="platform-arch">${item.arch}</span>` : ''}
+                  `;
+                  
+                  buttonsContainer.appendChild(button);
+                });
+              }
+            });
+
+            // If no assets found, show fallback
+            if (buttonsContainer.children.length === 0) {
+              buttonsContainer.innerHTML = `
+                <a href="${data.html_url}" class="download-button">
+                  View Release on GitHub
+                </a>
+              `;
+            }
+          }
+        }
+      })
+      .catch(() => {
+        // Fallback if API fails
+        const versionEl = document.getElementById('version-number');
+        if (versionEl) {
+          versionEl.textContent = 'v0.1.0';
+        }
+        const buttonsContainer = document.getElementById('download-buttons');
+        if (buttonsContainer) {
+          buttonsContainer.innerHTML = `
+            <a href="https://github.com/hmontazeri/journal-app/releases/latest" class="download-button">
+              View Releases on GitHub
+            </a>
+          `;
+        }
+      });
+  </script>
+</body>
+</html>

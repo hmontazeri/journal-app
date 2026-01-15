@@ -64,3 +64,30 @@ export async function syncFromCloud(
     };
   }
 }
+
+/**
+ * Delete vault data from Cloudflare Worker
+ */
+export async function deleteFromCloud(
+  vaultId: string
+): Promise<SyncResponse> {
+  try {
+    const response = await fetch(
+      `${SYNC_API_URL}/api/sync?vaultId=${encodeURIComponent(vaultId)}`,
+      {
+        method: 'DELETE',
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Delete failed: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}

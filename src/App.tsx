@@ -7,14 +7,17 @@ import { JournalEntryComponent } from './components/JournalEntry';
 import { DateNavigation } from './components/DateNavigation';
 import { InsightsView } from './components/Stats/InsightsView';
 import { HistoryOverlay } from './components/HistoryOverlay';
+import { UserInfoDialog } from './components/UserInfoDialog';
 import { syncToCloud, syncFromCloud } from './services/sync';
+import { syncQueue } from './services/syncQueue';
+import { hasDataChanged, markAsSynced, resetSyncTracking } from './services/syncOptimizer';
 import { encrypt, decrypt } from './utils/encryption';
 import { getLocalJournalData, saveLocalJournalData } from './services/storage';
 import { JournalData } from './types';
 import './App.css';
 
 function App() {
-  const { vaultConfig, loading: vaultLoading, isUnlocked, unlock, reload: reloadVault } = useVault();
+  const { vaultConfig, loading: vaultLoading, isUnlocked, unlock, reload: reloadVault, resetVault } = useVault();
   const { journalData, currentDate, setCurrentDate, getCurrentEntry, getEntry, saveEntry, loading: journalLoading, reload } = useJournal();
   const [password, setPassword] = useState<string | null>(null);
   const [unlockError, setUnlockError] = useState('');
@@ -22,6 +25,7 @@ function App() {
   const [isOffline, setIsOffline] = useState(false);
   const [view, setView] = useState<'journal' | 'insights'>('journal');
   const [showHistoryOverlay, setShowHistoryOverlay] = useState(false);
+  const [showUserInfo, setShowUserInfo] = useState(false);
 
   // Check if vault exists and is unlocked
   const needsVaultSetup = !vaultConfig && !vaultLoading;
@@ -31,6 +35,8 @@ function App() {
   const handleVaultSetup = async (vaultId: string, userPassword: string) => {
     console.log('handleVaultSetup called with vaultId:', vaultId);
     setPassword(userPassword);
+    // Reset sync tracking for new vault
+    resetSyncTracking();
     // Reload vault config to pick up the newly created vault
     await reloadVault();
     unlock();
@@ -52,6 +58,24 @@ function App() {
     }
   };
 
+  // Handle vault reset (change vault)
+  const handleResetVault = async () => {
+    // Clear password and unlock state
+    setPassword(null);
+    setUnlockError('');
+    setSyncError(null);
+    // Clear sync queue
+    syncQueue.clear();
+    // Reset sync tracking
+    resetSyncTracking();
+    // Reset vault (clears local data and vault config)
+    await resetVault();
+    // Reload vault config to show setup screen
+    await reloadVault();
+    // Reload journal data to clear it from state
+    await reload();
+  };
+
   // Check online status
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -66,6 +90,31 @@ function App() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Sync on app close/blur to ensure data is saved
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      if (password && vaultConfig && journalData) {
+        // Force flush sync queue before closing
+        await syncQueue.flush();
+      }
+    };
+
+    const handleBlur = async () => {
+      if (password && vaultConfig && journalData) {
+        // Sync when window loses focus (user switches apps)
+        await syncQueue.flush();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [password, vaultConfig, journalData]);
 
   // Sync journal data to/from cloud
   const syncJournalData = useCallback(async (userPassword: string, fromCloud = false) => {
@@ -107,10 +156,12 @@ function App() {
               };
               
               await saveLocalJournalData(mergedData);
+              markAsSynced(mergedData);
               reload();
               setSyncError(null); // Clear any previous errors
             } else {
               await saveLocalJournalData(cloudData);
+              markAsSynced(cloudData);
               reload();
               setSyncError(null); // Clear any previous errors
             }
@@ -123,15 +174,18 @@ function App() {
           setSyncError(null); // Clear errors if no data to sync
         }
       } else {
-        // Sync to cloud
-        const encrypted = await encrypt(JSON.stringify(journalData), userPassword);
-        const response = await syncToCloud(vaultConfig.vaultId, encrypted);
-        if (response.success) {
-          console.log('Synced to cloud successfully');
-          setSyncError(null); // Clear any previous errors
-        } else {
-          setSyncError('Sync failed - please try again');
+        // Check if data has actually changed before syncing
+        const dataChanged = await hasDataChanged(journalData);
+        
+        if (dataChanged) {
+          // Sync to cloud using queue (batched and debounced)
+          const encrypted = await encrypt(JSON.stringify(journalData), userPassword);
+          syncQueue.enqueue(vaultConfig.vaultId, encrypted);
+          // Mark as synced after queuing
+          markAsSynced(journalData);
         }
+        // Don't set error immediately - queue handles it
+        setSyncError(null);
       }
     } catch (error) {
       console.error('Sync failed:', error);
@@ -158,7 +212,7 @@ function App() {
 
   // Show password unlock
   if (needsUnlock) {
-    return <PasswordUnlock onUnlock={handleUnlock} error={unlockError} />;
+    return <PasswordUnlock onUnlock={handleUnlock} onResetVault={handleResetVault} error={unlockError} />;
   }
 
   // Show journal entry
@@ -181,6 +235,8 @@ function App() {
           onDateChange={setCurrentDate}
           hasEntry={hasEntry}
           onDateClick={() => setShowHistoryOverlay(true)}
+          onSignOut={handleResetVault}
+          onUserInfo={() => setShowUserInfo(true)}
         />
       </div>
 
@@ -217,6 +273,17 @@ function App() {
             currentDate={currentDate}
             onDateSelect={setCurrentDate}
             onClose={() => setShowHistoryOverlay(false)}
+          />
+        )}
+
+        {showUserInfo && (
+          <UserInfoDialog
+            vaultConfig={vaultConfig}
+            onClose={() => setShowUserInfo(false)}
+            onDeleteServerData={async () => {
+              // Reload journal data after server deletion
+              await reload();
+            }}
           />
         )}
       </div>

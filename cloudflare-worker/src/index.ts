@@ -18,7 +18,7 @@ export default {
     // CORS headers
     const corsHeaders = new Headers({
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Max-Age': '86400', // 24 hours
     });
@@ -126,6 +126,57 @@ export default {
             headers: getHeaders,
           }
         );
+      }
+
+      // DELETE /api/sync?vaultId=xxx - Delete vault data from R2
+      if (request.method === 'DELETE' && path === '/api/sync') {
+        const vaultId = url.searchParams.get('vaultId');
+        
+        if (!vaultId) {
+          const errorHeaders = new Headers(corsHeaders);
+          errorHeaders.set('Content-Type', 'application/json');
+          
+          return new Response(
+            JSON.stringify({ success: false, error: 'Missing vaultId parameter' }),
+            { 
+              status: 400,
+              headers: errorHeaders
+            }
+          );
+        }
+
+        try {
+          const key = `vaults/${vaultId}/journal.json`;
+          await env.JOURNAL_STORAGE.delete(key);
+
+          const deleteHeaders = new Headers(corsHeaders);
+          deleteHeaders.set('Content-Type', 'application/json');
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: 'Vault data deleted successfully',
+            }),
+            {
+              headers: deleteHeaders,
+            }
+          );
+        } catch (error) {
+          console.error('Delete error:', error);
+          const errorHeaders = new Headers(corsHeaders);
+          errorHeaders.set('Content-Type', 'application/json');
+          
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: error instanceof Error ? error.message : 'Unknown error' 
+            }),
+            { 
+              status: 500,
+              headers: errorHeaders
+            }
+          );
+        }
       }
 
       // 404 for unknown routes

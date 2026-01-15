@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useVault } from '../hooks/useVault';
+import { syncFromCloud } from '../services/sync';
+import { decrypt } from '../utils/encryption';
 
 interface VaultSetupProps {
   onComplete: (vaultId: string, password: string) => void;
@@ -12,6 +14,9 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [vaultId, setVaultId] = useState('');
   const [error, setError] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [vaultVerified, setVaultVerified] = useState(false);
+  const [checkingVault, setCheckingVault] = useState(false);
 
   const handleCreateVault = async () => {
     setError('');
@@ -39,26 +44,100 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
     }
   };
 
-  const handleSetupExisting = async () => {
+  // Step 1: Check if vault exists
+  const handleCheckVault = async () => {
     setError('');
+    setCheckingVault(true);
 
     if (!vaultId.trim()) {
       setError('Please enter a vault ID');
+      setCheckingVault(false);
       return;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (!navigator.onLine) {
+      setError('You are offline. Please check your connection and try again.');
+      setCheckingVault(false);
       return;
     }
 
     try {
-      await setupExistingVault(vaultId.trim());
-      onComplete(vaultId.trim(), password);
+      // Check if vault exists in R2
+      const response = await syncFromCloud(vaultId.trim());
+      
+      if (!response.success) {
+        setError('Failed to check vault. Please check your connection and try again.');
+        setCheckingVault(false);
+        return;
+      }
+
+      if (response.data === null) {
+        // Vault doesn't exist
+        setError('Vault not found. Please check the vault ID and try again.');
+        setCheckingVault(false);
+        return;
+      }
+
+      // Vault exists - proceed to password verification
+      setVaultVerified(true);
+      setCheckingVault(false);
     } catch (err) {
-      setError('Failed to setup vault. Please try again.');
+      setError('Failed to check vault. Please try again.');
       console.error(err);
+      setCheckingVault(false);
     }
+  };
+
+  // Step 2: Verify password and complete setup
+  const handleVerifyPassword = async () => {
+    setError('');
+    setVerifying(true);
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      setVerifying(false);
+      return;
+    }
+
+    if (!navigator.onLine) {
+      setError('You are offline. Please check your connection and try again.');
+      setVerifying(false);
+      return;
+    }
+
+    try {
+      // Fetch encrypted data to verify password
+      const response = await syncFromCloud(vaultId.trim());
+      
+      if (!response.success || !response.data) {
+        setError('Failed to verify password. Please try again.');
+        setVerifying(false);
+        return;
+      }
+
+      // Try to decrypt with the provided password
+      try {
+        await decrypt(response.data, password);
+        // Password is correct - set up the vault
+        await setupExistingVault(vaultId.trim());
+        onComplete(vaultId.trim(), password);
+      } catch (decryptError) {
+        // Password is incorrect
+        setError('Incorrect password. Please try again.');
+        setVerifying(false);
+      }
+    } catch (err) {
+      setError('Failed to verify password. Please try again.');
+      console.error(err);
+      setVerifying(false);
+    }
+  };
+
+  // Reset to vault ID entry
+  const handleBackToVaultId = () => {
+    setVaultVerified(false);
+    setPassword('');
+    setError('');
   };
 
   return (
@@ -70,13 +149,27 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
         <div className="mode-toggle">
           <button
             className={mode === 'new' ? 'active' : ''}
-            onClick={() => setMode('new')}
+            onClick={() => {
+              setMode('new');
+              setVaultVerified(false);
+              setVaultId('');
+              setPassword('');
+              setConfirmPassword('');
+              setError('');
+            }}
           >
             New Vault
           </button>
           <button
             className={mode === 'existing' ? 'active' : ''}
-            onClick={() => setMode('existing')}
+            onClick={() => {
+              setMode('existing');
+              setVaultVerified(false);
+              setVaultId('');
+              setPassword('');
+              setConfirmPassword('');
+              setError('');
+            }}
           >
             Existing Vault
           </button>
@@ -112,32 +205,70 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
           </div>
         ) : (
           <div className="setup-form">
-            <div className="form-group">
-              <label htmlFor="vaultId">Vault ID</label>
-              <input
-                id="vaultId"
-                type="text"
-                value={vaultId}
-                onChange={(e) => setVaultId(e.target.value)}
-                placeholder="Enter your vault ID"
-                autoFocus
-              />
-              <small>Get this from your other device</small>
-            </div>
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-              />
-            </div>
-            {error && <div className="error">{error}</div>}
-            <button onClick={handleSetupExisting} className="primary-button">
-              Connect to Vault
-            </button>
+            {!vaultVerified ? (
+              // Step 1: Check if vault exists
+              <>
+                <div className="form-group">
+                  <label htmlFor="vaultId">Vault ID</label>
+                  <input
+                    id="vaultId"
+                    type="text"
+                    value={vaultId}
+                    onChange={(e) => setVaultId(e.target.value)}
+                    placeholder="Enter your vault ID"
+                    autoFocus
+                    disabled={checkingVault}
+                  />
+                  <small>Get this from your other device</small>
+                </div>
+                {error && <div className="error">{error}</div>}
+                <button 
+                  onClick={handleCheckVault} 
+                  className="primary-button"
+                  disabled={checkingVault}
+                >
+                  {checkingVault ? 'Checking...' : 'Check Vault'}
+                </button>
+              </>
+            ) : (
+              // Step 2: Verify password
+              <>
+                <div className="verification-success">
+                  <div className="success-icon">✓</div>
+                  <p>Vault found! Please enter your password to continue.</p>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="password">Password</label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    autoFocus
+                    disabled={verifying}
+                  />
+                </div>
+                {error && <div className="error">{error}</div>}
+                <div className="button-group">
+                  <button 
+                    type="button"
+                    onClick={handleBackToVaultId} 
+                    className="secondary-button"
+                    disabled={verifying}
+                  >
+                    Back
+                  </button>
+                  <button 
+                    onClick={handleVerifyPassword} 
+                    className="primary-button"
+                    disabled={verifying}
+                  >
+                    {verifying ? 'Verifying...' : 'Connect to Vault'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -264,6 +395,76 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
           margin-bottom: 1rem;
           font-size: 0.875rem;
           border: 1px solid rgba(197, 48, 48, 0.2);
+        }
+
+        .verification-success {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 1rem;
+          background: rgba(212, 165, 116, 0.1);
+          border: 1px solid var(--accent);
+          border-radius: 8px;
+          margin-bottom: 1.5rem;
+        }
+
+        .success-icon {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: var(--accent);
+          color: var(--bg-primary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: 0.875rem;
+          flex-shrink: 0;
+        }
+
+        .verification-success p {
+          margin: 0;
+          color: var(--text-primary);
+          font-size: 0.9375rem;
+        }
+
+        .button-group {
+          display: flex;
+          gap: 0.75rem;
+        }
+
+        .button-group .primary-button {
+          flex: 1;
+        }
+
+        .secondary-button {
+          padding: 0.875rem 1.5rem;
+          background: transparent;
+          color: var(--text-secondary);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          font-size: 1rem;
+          font-weight: 500;
+          font-family: var(--font-sans);
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .secondary-button:hover:not(:disabled) {
+          color: var(--text-primary);
+          border-color: var(--accent);
+          background: var(--bg-secondary);
+        }
+
+        .secondary-button:disabled,
+        .primary-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .form-group input:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
       `}</style>
     </div>

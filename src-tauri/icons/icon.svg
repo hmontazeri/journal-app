@@ -1,0 +1,25 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Minimalist journal icon: open book symbol -->
+  
+  <!-- Background circle for better dock visibility -->
+  <circle cx="256" cy="256" r="200" fill="#ffffff" opacity="0.95"/>
+  
+  <!-- Left page (back) -->
+  <rect x="80" y="112" width="176" height="304" fill="#f5f5f5" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" rx="6"/>
+  
+  <!-- Right page (front) -->
+  <rect x="256" y="112" width="176" height="304" fill="#ffffff" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" rx="6"/>
+  
+  <!-- Binding/spine -->
+  <line x1="256" y1="112" x2="256" y2="416" stroke="#1a1a1a" stroke-width="14" stroke-linecap="round"/>
+  
+  <!-- Minimalist lines representing text (left page) -->
+  <line x1="112" y1="176" x2="208" y2="176" stroke="#d4a574" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  <line x1="112" y1="224" x2="208" y2="224" stroke="#d4a574" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  <line x1="112" y1="272" x2="192" y2="272" stroke="#d4a574" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  
+  <!-- Minimalist lines representing text (right page) -->
+  <line x1="288" y1="176" x2="384" y2="176" stroke="#d4a574" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  <line x1="288" y1="224" x2="384" y2="224" stroke="#d4a574" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+  <line x1="288" y1="272" x2="368" y2="272" stroke="#d4a574" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+</svg>

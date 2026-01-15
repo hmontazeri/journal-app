@@ -54,7 +54,7 @@ export function JournalEntryComponent({ entry, onSave, onSync }: JournalEntryPro
         if (shouldSync && onSync) {
           onSync();
         }
-      }, 2000); // 2 second debounce
+      }, 3000); // 3 second debounce (reduced sync frequency)
 
       return () => clearTimeout(timeoutId);
     },

@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "worker:dev": "cd cloudflare-worker && npm run dev",
-    "worker:deploy": "cd cloudflare-worker && npm run deploy"
+    "worker:deploy": "cd cloudflare-worker && npm run deploy",
+    "icons:generate": "node scripts/generate-icons.js && node scripts/generate-icns.js && node scripts/generate-ico.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -27,6 +28,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "sharp": "^0.34.5",
     "typescript": "~5.8.3",
     "vite": "^7.0.4"
   }

@@ -2,10 +2,11 @@ import { useState } from 'react';
 
 interface PasswordUnlockProps {
   onUnlock: (password: string) => void;
+  onResetVault?: () => void;
   error?: string;
 }
 
-export function PasswordUnlock({ onUnlock, error }: PasswordUnlockProps) {
+export function PasswordUnlock({ onUnlock, onResetVault, error }: PasswordUnlockProps) {
   const [password, setPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,6 +37,18 @@ export function PasswordUnlock({ onUnlock, error }: PasswordUnlockProps) {
             Unlock
           </button>
         </form>
+
+        {onResetVault && (
+          <div className="vault-actions">
+            <button 
+              type="button" 
+              className="secondary-button"
+              onClick={onResetVault}
+            >
+              Change Vault
+            </button>
+          </div>
+        )}
       </div>
 
       <style>{`
@@ -120,6 +133,32 @@ export function PasswordUnlock({ onUnlock, error }: PasswordUnlockProps) {
           margin-bottom: 1rem;
           font-size: 0.875rem;
           border: 1px solid rgba(197, 48, 48, 0.2);
+        }
+
+        .vault-actions {
+          margin-top: 1.5rem;
+          padding-top: 1.5rem;
+          border-top: 1px solid var(--border);
+        }
+
+        .secondary-button {
+          width: 100%;
+          padding: 0.875rem;
+          background: transparent;
+          color: var(--text-secondary);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          font-size: 0.9375rem;
+          font-weight: 500;
+          font-family: var(--font-sans);
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .secondary-button:hover {
+          color: var(--text-primary);
+          border-color: var(--accent);
+          background: var(--bg-secondary);
         }
       `}</style>
     </div>

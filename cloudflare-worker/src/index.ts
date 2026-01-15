@@ -131,7 +131,7 @@ export default {
         });
       }
       
-      const key = `vaults/${vaultId}/data.enc`;
+      const key = `vaults/${vaultId}/journal.json`; // Keep same path as old worker for compatibility
       
       // GET: Fetch encrypted data
       if (request.method === 'GET') {

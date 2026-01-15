@@ -1,18 +1,24 @@
 import { useState } from 'react';
 
 interface PasswordUnlockProps {
-  onUnlock: (password: string) => void;
+  onUnlock: (password: string) => Promise<void>;
   onResetVault?: () => void;
   error?: string;
 }
 
 export function PasswordUnlock({ onUnlock, onResetVault, error }: PasswordUnlockProps) {
   const [password, setPassword] = useState('');
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password) {
-      onUnlock(password);
+    if (password && !isUnlocking) {
+      setIsUnlocking(true);
+      try {
+        await onUnlock(password);
+      } finally {
+        setIsUnlocking(false);
+      }
     }
   };
 
@@ -33,8 +39,8 @@ export function PasswordUnlock({ onUnlock, onResetVault, error }: PasswordUnlock
             />
           </div>
           {error && <div className="error">{error}</div>}
-          <button type="submit" className="primary-button">
-            Unlock
+          <button type="submit" className="primary-button" disabled={isUnlocking}>
+            {isUnlocking ? 'Loading your journal...' : 'Unlock'}
           </button>
         </form>
 
@@ -123,6 +129,11 @@ export function PasswordUnlock({ onUnlock, onResetVault, error }: PasswordUnlock
 
         .primary-button:hover {
           opacity: 0.9;
+        }
+
+        .primary-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .error {

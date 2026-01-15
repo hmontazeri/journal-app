@@ -50,11 +50,25 @@ function App() {
   const handleUnlock = async (userPassword: string) => {
     setUnlockError('');
     setPassword(userPassword);
-    unlock();
     
-    // Try to sync from cloud
+    // Try to sync from cloud BEFORE unlocking
     if (vaultConfig) {
-      await syncJournalData(userPassword, true);
+      try {
+        await syncJournalData(userPassword, true);
+        // Only unlock after data is synced (or if no data exists in cloud)
+        unlock();
+      } catch (error: any) {
+        console.error('Failed to sync during unlock:', error);
+        // Don't unlock if decryption failed (wrong password)
+        if (error?.message === 'Decryption failed') {
+          setPassword(null); // Clear the wrong password
+          return;
+        }
+        // Still unlock even if sync fails for other reasons (offline mode, network error, etc.)
+        unlock();
+      }
+    } else {
+      unlock();
     }
   };
 
@@ -180,7 +194,7 @@ function App() {
           } catch (error) {
             console.error('Failed to decrypt cloud data:', error);
             setUnlockError('Failed to decrypt data. Wrong password?');
-            lock(); // Lock again
+            throw new Error('Decryption failed');
           }
         } else {
           console.log('No cloud data found for this vault');

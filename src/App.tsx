@@ -17,7 +17,7 @@ import { JournalData } from './types';
 import './App.css';
 
 function App() {
-  const { vaultConfig, loading: vaultLoading, isUnlocked, unlock, reload: reloadVault, resetVault } = useVault();
+  const { vaultConfig, loading: vaultLoading, isUnlocked, unlock, lock, reload: reloadVault, resetVault } = useVault();
   const { journalData, currentDate, setCurrentDate, getCurrentEntry, saveEntry, loading: journalLoading, reload } = useJournal();
   const [password, setPassword] = useState<string | null>(null);
   const [unlockError, setUnlockError] = useState('');
@@ -118,7 +118,11 @@ function App() {
 
   // Sync journal data to/from cloud
   const syncJournalData = useCallback(async (userPassword: string, fromCloud = false) => {
-    if (!vaultConfig || !journalData) return;
+    if (!vaultConfig) return;
+    
+    // Allow syncing from cloud even if local data is empty (e.g., after logout)
+    if (!fromCloud && !journalData) return;
+    
     if (!navigator.onLine) {
       setSyncError('Offline - changes will sync when online');
       return;
@@ -128,15 +132,20 @@ function App() {
     try {
       if (fromCloud) {
         // Sync from cloud
+        console.log('Syncing from cloud for vault:', vaultConfig.vaultId);
         const response = await syncFromCloud(vaultConfig.vaultId);
+        console.log('Cloud sync response:', { success: response.success, hasData: !!response.data });
+        
         if (response.success && response.data) {
           try {
             const decrypted = await decrypt(response.data, userPassword);
             const cloudData: JournalData = JSON.parse(decrypted);
+            console.log('Decrypted cloud data, entry count:', Object.keys(cloudData.entries).length);
             
             // Merge with local data (newer wins)
             const localData = await getLocalJournalData();
             if (localData) {
+              console.log('Merging with local data, entry count:', Object.keys(localData.entries).length);
               const mergedEntries = { ...cloudData.entries };
               Object.keys(localData.entries).forEach((date) => {
                 const localEntry = localData.entries[date];
@@ -157,32 +166,39 @@ function App() {
               
               await saveLocalJournalData(mergedData);
               markAsSynced(mergedData);
-              reload();
+              await reload();
               setSyncError(null); // Clear any previous errors
+              console.log('Successfully merged and loaded data');
             } else {
+              console.log('No local data, using cloud data directly');
               await saveLocalJournalData(cloudData);
               markAsSynced(cloudData);
-              reload();
+              await reload();
               setSyncError(null); // Clear any previous errors
+              console.log('Successfully loaded cloud data');
             }
           } catch (error) {
             console.error('Failed to decrypt cloud data:', error);
             setUnlockError('Failed to decrypt data. Wrong password?');
-            unlock(); // Lock again
+            lock(); // Lock again
           }
         } else {
+          console.log('No cloud data found for this vault');
           setSyncError(null); // Clear errors if no data to sync
         }
       } else {
-        // Check if data has actually changed before syncing
-        const dataChanged = await hasDataChanged(journalData);
-        
-        if (dataChanged) {
-          // Sync to cloud using queue (batched and debounced)
-          const encrypted = await encrypt(JSON.stringify(journalData), userPassword);
-          syncQueue.enqueue(vaultConfig.vaultId, encrypted);
-          // Mark as synced after queuing
-          markAsSynced(journalData);
+        // Sync to cloud (only if we have data)
+        if (journalData) {
+          // Check if data has actually changed before syncing
+          const dataChanged = await hasDataChanged(journalData);
+          
+          if (dataChanged) {
+            // Sync to cloud using queue (batched and debounced)
+            const encrypted = await encrypt(JSON.stringify(journalData), userPassword);
+            syncQueue.enqueue(vaultConfig.vaultId, encrypted);
+            // Mark as synced after queuing
+            markAsSynced(journalData);
+          }
         }
         // Don't set error immediately - queue handles it
         setSyncError(null);

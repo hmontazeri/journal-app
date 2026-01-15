@@ -9,7 +9,7 @@
  */
 
 interface Env {
-  JOURNAL_BUCKET: R2Bucket;
+  JOURNAL_STORAGE: R2Bucket; // Keep original name for backward compatibility
   API_KEY: string; // Set this in Cloudflare dashboard: Settings > Variables > Environment Variables
   RATE_LIMIT_KV?: KVNamespace; // Optional: for rate limiting (create KV namespace in dashboard)
 }
@@ -135,7 +135,7 @@ export default {
       
       // GET: Fetch encrypted data
       if (request.method === 'GET') {
-        const object = await env.JOURNAL_BUCKET.get(key);
+        const object = await env.JOURNAL_STORAGE.get(key);
         
         if (!object) {
           return new Response(JSON.stringify({ 
@@ -169,7 +169,7 @@ export default {
           });
         }
         
-        await env.JOURNAL_BUCKET.put(key, body.data);
+        await env.JOURNAL_STORAGE.put(key, body.data);
         
         return new Response(JSON.stringify({ 
           success: true 
@@ -180,7 +180,7 @@ export default {
       
       // DELETE: Remove vault data
       if (request.method === 'DELETE') {
-        await env.JOURNAL_BUCKET.delete(key);
+        await env.JOURNAL_STORAGE.delete(key);
         
         return new Response(JSON.stringify({ 
           success: true 

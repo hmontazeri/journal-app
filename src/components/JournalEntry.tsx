@@ -49,6 +49,11 @@ export function JournalEntryComponent({ entry, onSave, onSync, allTags = [] }: J
     },
   });
 
+  // Calculate word count from editor content
+  const wordCount = editor 
+    ? editor.getText().trim().split(/\s+/).filter(word => word.length > 0).length 
+    : 0;
+
   // Debounced save function - only syncs on user input
   const handleSave = useCallback(
     (updatedEntry: JournalEntry, shouldSync = false) => {
@@ -262,6 +267,9 @@ export function JournalEntryComponent({ entry, onSave, onSync, allTags = [] }: J
 
         <div className="editor-container">
           <EditorContent editor={editor} />
+          <div className="word-count">
+            {wordCount} {wordCount === 1 ? 'word' : 'words'}
+          </div>
         </div>
 
         <div className="entry-meta">

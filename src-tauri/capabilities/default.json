@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "fs:default",
+    "fs:scope-home",
+    "fs:scope-appdata",
+    "fs:scope-appconfig",
+    "fs:scope-appcache",
+    "fs:scope-applocaldata",
+    "fs:scope-applog",
+    "fs:scope-document",
+    "dialog:default"
+  ]
+}

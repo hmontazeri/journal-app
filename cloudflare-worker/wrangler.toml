@@ -1,0 +1,11 @@
+name = "journal-sync"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[[r2_buckets]]
+binding = "JOURNAL_STORAGE"
+bucket_name = "journal-vaults"
+preview_bucket_name = "journal-vaults-preview"
+
+[vars]
+ENVIRONMENT = "production"

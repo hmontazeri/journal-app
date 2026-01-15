@@ -34,17 +34,45 @@ function App() {
 
   // Handle vault setup completion
   const handleVaultSetup = async (vaultId: string, userPassword: string) => {
-    console.log('handleVaultSetup called with vaultId:', vaultId);
+    console.log('[handleVaultSetup] Called with vaultId:', vaultId);
     setPassword(userPassword);
     // Reset sync tracking for new vault
     resetSyncTracking();
     // Reload vault config to pick up the newly created vault
+    console.log('[handleVaultSetup] Reloading vault config...');
     await reloadVault();
+    console.log('[handleVaultSetup] Vault config reloaded');
+    
+    // Try to sync from cloud (in case this is an existing vault)
+    // We need to manually check because vaultConfig state may not have updated yet
+    console.log('[handleVaultSetup] Attempting to sync from cloud for vaultId:', vaultId);
+    try {
+      const response = await syncFromCloud(vaultId);
+      console.log('[handleVaultSetup] Cloud sync response:', { success: response.success, hasData: !!response.data });
+      
+      if (response.success && response.data) {
+        const decrypted = await decrypt(response.data, userPassword);
+        const cloudData: JournalData = JSON.parse(decrypted);
+        console.log('[handleVaultSetup] Decrypted cloud data, entry count:', Object.keys(cloudData.entries).length);
+        
+        // Save to local storage
+        await saveLocalJournalData(cloudData);
+        markAsSynced(cloudData);
+        console.log('[handleVaultSetup] Saved cloud data to localStorage');
+      } else {
+        console.log('[handleVaultSetup] No cloud data found (new vault)');
+      }
+    } catch (error) {
+      console.error('[handleVaultSetup] Sync failed, continuing anyway:', error);
+      // Continue even if sync fails (might be a new vault with no data)
+    }
+    
+    console.log('[handleVaultSetup] Unlocking...');
     unlock();
-    console.log('Unlocked, reloading journal data...');
+    console.log('[handleVaultSetup] Reloading journal data from localStorage...');
     // Reload journal data after vault is created
     await reload();
-    console.log('Journal data reloaded');
+    console.log('[handleVaultSetup] Complete');
   };
 
   // Handle password unlock

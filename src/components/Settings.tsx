@@ -34,21 +34,24 @@ export function Settings({ onClose }: SettingsProps) {
   const handleSave = async () => {
     setError('');
 
-    if (!backendUrl.trim()) {
-      setError('Backend URL is required');
-      return;
-    }
+    // Validate only if user is enabling cloud sync
+    if (backendUrl.trim() || apiKey.trim()) {
+      if (!backendUrl.trim()) {
+        setError('Backend URL is required when using cloud sync');
+        return;
+      }
 
-    try {
-      new URL(backendUrl);
-    } catch {
-      setError('Invalid URL format');
-      return;
-    }
+      try {
+        new URL(backendUrl);
+      } catch {
+        setError('Invalid URL format');
+        return;
+      }
 
-    if (!apiKey.trim()) {
-      setError('API Key is required');
-      return;
+      if (!apiKey.trim()) {
+        setError('API Key is required when using cloud sync');
+        return;
+      }
     }
 
     try {
@@ -60,8 +63,11 @@ export function Settings({ onClose }: SettingsProps) {
 
       const updatedConfig: VaultConfig = {
         ...config,
-        backendUrl,
-        apiKey,
+        // Remove backend config if both fields are empty (disable cloud sync)
+        ...(backendUrl.trim() && apiKey.trim() 
+          ? { backendUrl, apiKey }
+          : { backendUrl: undefined, apiKey: undefined }
+        ),
       };
 
       await saveVaultConfig(updatedConfig);
@@ -105,13 +111,16 @@ export function Settings({ onClose }: SettingsProps) {
 
         <div className="settings-content">
           <div className="setting-section">
-            <h3>Backend Configuration</h3>
+            <h3>Cloud Sync Configuration</h3>
             <p className="setting-description">
-              Configure your cloud sync backend
+              {backendUrl && apiKey 
+                ? 'Cloud sync is enabled. Your journal syncs across devices.'
+                : 'Cloud sync is disabled. Your journal is stored locally only.'
+              }
             </p>
 
             <div className="form-group">
-              <label htmlFor="backendUrl">Backend URL</label>
+              <label htmlFor="backendUrl">Backend URL (Optional)</label>
               <input
                 id="backendUrl"
                 type="url"
@@ -123,7 +132,7 @@ export function Settings({ onClose }: SettingsProps) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="apiKey">API Key</label>
+              <label htmlFor="apiKey">API Key (Optional)</label>
               <input
                 id="apiKey"
                 type="password"
@@ -151,13 +160,31 @@ export function Settings({ onClose }: SettingsProps) {
 
             <div className="button-group">
               <button className="primary-button" onClick={handleSave}>
-                {saved ? '✓ Saved!' : 'Save Settings'}
+                {saved ? '✓ Saved!' : backendUrl && apiKey ? 'Update Settings' : 'Enable Cloud Sync'}
               </button>
+              {backendUrl && apiKey && (
+                <button 
+                  className="secondary-button" 
+                  onClick={() => {
+                    setBackendUrl('');
+                    setApiKey('');
+                  }}
+                >
+                  Disable Cloud Sync
+                </button>
+              )}
             </div>
 
-            <div className="warning-box">
-              <strong>Warning:</strong> Changing these settings will require restarting the app to take effect.
-            </div>
+            {!backendUrl || !apiKey ? (
+              <div className="info-box">
+                <strong>Local Only Mode:</strong> Your journal is stored only on this device. 
+                Enable cloud sync to access your entries across multiple devices.
+              </div>
+            ) : (
+              <div className="warning-box">
+                <strong>Note:</strong> Changing these settings will require restarting the app to take effect.
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -338,6 +365,30 @@ export function Settings({ onClose }: SettingsProps) {
 
         .info-box strong {
           color: var(--accent);
+        }
+
+        .error-box {
+          margin-top: 1rem;
+          padding: 1rem;
+          background: rgba(255, 59, 48, 0.1);
+          border: 1px solid rgba(255, 59, 48, 0.3);
+          border-radius: 8px;
+          font-size: 0.9375rem;
+          color: var(--text-primary);
+        }
+
+        .warning-box {
+          margin-top: 1rem;
+          padding: 1rem;
+          background: rgba(255, 149, 0, 0.1);
+          border: 1px solid rgba(255, 149, 0, 0.3);
+          border-radius: 8px;
+          font-size: 0.9375rem;
+          color: var(--text-primary);
+        }
+
+        .warning-box strong {
+          color: #ff9500;
         }
       `}</style>
     </div>

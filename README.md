@@ -4,11 +4,12 @@ A beautiful, minimalist journaling app built with Tauri 2.0. Your thoughts, encr
 
 ## ✨ Features
 
+- **Privacy First**: Works 100% locally - no account, no tracking, no cloud required
+- **Optional Cloud Sync**: Enable syncing to your own backend when you need it
 - **End-to-End Encryption**: AES-256-GCM encryption with PBKDF2 key derivation
 - **Rich Text Editor**: Beautiful WYSIWYG editor with markdown support
 - **Mood & Energy Tracking**: Track your emotional state and energy levels
 - **Tags & Organization**: Organize entries with custom tags
-- **Cloud Sync**: Sync to your own Cloudflare Worker backend
 - **Cross-Platform**: Works on macOS, Windows, and Linux
 - **Offline First**: Write anytime, sync when online
 - **Dark Mode**: Automatic system-based theme switching
@@ -19,11 +20,12 @@ A beautiful, minimalist journaling app built with Tauri 2.0. Your thoughts, encr
 
 1. **Download the latest release** from the [Releases page](https://github.com/hmontazeri/journal-app/releases)
 2. **Install** the app for your platform
-3. **Set up your backend**:
-   - Deploy the Cloudflare Worker (see [Backend Setup](#backend-setup))
-   - Or use an existing backend if shared with you
-4. **Launch the app** and enter your backend URL and API key
-5. **Create a new vault** or connect to an existing one
+3. **Launch the app**
+4. **Choose your mode**:
+   - **Local Only**: Skip cloud sync, start journaling immediately (recommended for privacy)
+   - **Cloud Sync**: Set up backend for multi-device access (optional)
+5. **Create your vault** with a secure password
+6. **Start journaling!**
 
 ### For Developers
 
@@ -42,13 +44,22 @@ npm run tauri dev
 npm run tauri build
 ```
 
-## 🔐 Backend Setup
+## 🔐 Cloud Sync (Optional)
 
-This app requires a cloud backend for syncing. We recommend using Cloudflare Workers (free tier available).
+By default, the app works 100% locally on your device. If you want to sync across multiple devices, you can optionally set up cloud sync.
 
-### Deploy Cloudflare Worker
+### Option 1: Skip Cloud Sync (Recommended for Privacy)
 
-1. **Sign up** for [Cloudflare](https://cloudflare.com) (free tier is sufficient)
+- Click **"Skip (Local Only)"** when launching the app
+- Your journal stays on your device only
+- Maximum privacy - no data ever leaves your computer
+- You can enable cloud sync later in Settings if needed
+
+### Option 2: Enable Cloud Sync
+
+Deploy your own Cloudflare Worker backend (free tier available):
+
+1. **Sign up** for [Cloudflare](https://cloudflare.com)
 2. **Install Wrangler CLI**:
    ```bash
    npm install -g wrangler
@@ -59,18 +70,12 @@ This app requires a cloud backend for syncing. We recommend using Cloudflare Wor
    cd cloudflare-worker
    wrangler deploy
    ```
-4. **Configure security** (important!):
-   - Set an API key: `wrangler secret put API_KEY`
-   - Optionally set up rate limiting (see [Security Setup](./cloudflare-worker/SECURITY_SETUP.md))
-5. **Copy your worker URL** (e.g., `https://journal-sync.your-subdomain.workers.dev`)
+4. **Configure security**:
+   - Generate API key: `openssl rand -hex 32`
+   - Set it: `wrangler secret put API_KEY`
+5. **In the app**: Enter your worker URL and API key
 
-### Use in the App
-
-When you first launch the app, you'll be prompted to enter:
-- **Backend URL**: Your Cloudflare Worker URL
-- **API Key**: The API key you set in step 4
-
-These settings can be changed later in the Settings dialog (⚙️ icon in sidebar).
+See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for detailed instructions.
 
 ## 📖 Documentation
 

@@ -25,6 +25,6 @@ export interface JournalData {
 export interface VaultConfig {
   vaultId: string;
   createdAt: string;
-  backendUrl: string;
-  apiKey: string;
+  backendUrl?: string;  // Optional - for cloud sync
+  apiKey?: string;      // Optional - for cloud sync
 }

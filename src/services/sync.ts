@@ -1,6 +1,6 @@
 import { getVaultConfig } from './storage';
 
-async function getBackendConfig(): Promise<{ url: string; apiKey: string }> {
+async function getBackendConfig(): Promise<{ url: string; apiKey: string } | null> {
   // Try to get from vault config first
   const vaultConfig = await getVaultConfig();
   if (vaultConfig?.backendUrl && vaultConfig?.apiKey) {
@@ -18,7 +18,8 @@ async function getBackendConfig(): Promise<{ url: string; apiKey: string }> {
     return { url: tempUrl, apiKey: tempKey };
   }
 
-  throw new Error('Backend configuration not found. Please configure in Settings.');
+  // No backend configured - offline mode
+  return null;
 }
 
 function getHeaders(apiKey: string): HeadersInit {
@@ -48,6 +49,15 @@ export async function syncToCloud(
     const config = backendUrl && apiKey 
       ? { url: backendUrl, apiKey }
       : await getBackendConfig();
+
+    if (!config) {
+      // Offline mode - no backend configured
+      return {
+        success: true,
+        data: null,
+        error: 'Offline mode - cloud sync not configured'
+      };
+    }
 
     const response = await fetch(`${config.url}/sync/${vaultId}`, {
       method: 'POST',
@@ -97,6 +107,15 @@ export async function syncFromCloud(
       ? { url: backendUrl, apiKey }
       : await getBackendConfig();
 
+    if (!config) {
+      // Offline mode - no backend configured
+      return {
+        success: true,
+        data: null,
+        error: 'Offline mode - cloud sync not configured'
+      };
+    }
+
     const response = await fetch(`${config.url}/sync/${vaultId}`, {
       method: 'GET',
       headers: getHeaders(config.apiKey),
@@ -143,6 +162,15 @@ export async function deleteFromCloud(
     const config = backendUrl && apiKey 
       ? { url: backendUrl, apiKey }
       : await getBackendConfig();
+
+    if (!config) {
+      // Offline mode - no backend configured
+      return {
+        success: true,
+        data: null,
+        error: 'Offline mode - cloud sync not configured'
+      };
+    }
 
     const response = await fetch(`${config.url}/sync/${vaultId}`, {
       method: 'DELETE',

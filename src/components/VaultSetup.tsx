@@ -24,26 +24,33 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
   const handleBackendSetup = () => {
     setError('');
 
-    if (!backendUrl.trim()) {
-      setError('Backend URL is required');
-      return;
-    }
+    // Validate only if user provided values
+    if (backendUrl.trim() || apiKey.trim()) {
+      if (!backendUrl.trim()) {
+        setError('Backend URL is required when using cloud sync');
+        return;
+      }
 
-    try {
-      new URL(backendUrl);
-    } catch {
-      setError('Invalid URL format');
-      return;
-    }
+      try {
+        new URL(backendUrl);
+      } catch {
+        setError('Invalid URL format');
+        return;
+      }
 
-    if (!apiKey.trim()) {
-      setError('API Key is required');
-      return;
-    }
+      if (!apiKey.trim()) {
+        setError('API Key is required when using cloud sync');
+        return;
+      }
 
-    // Save backend config to localStorage temporarily
-    localStorage.setItem('temp_backend_url', backendUrl);
-    localStorage.setItem('temp_api_key', apiKey);
+      // Save backend config to localStorage temporarily
+      localStorage.setItem('temp_backend_url', backendUrl);
+      localStorage.setItem('temp_api_key', apiKey);
+    } else {
+      // Clear any temp storage if skipping
+      localStorage.removeItem('temp_backend_url');
+      localStorage.removeItem('temp_api_key');
+    }
 
     setStep('vault');
   };
@@ -63,7 +70,11 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
 
     try {
       console.log('Creating vault...');
-      const config = await createVault(backendUrl, apiKey);
+      // Pass backend config only if provided
+      const config = await createVault(
+        backendUrl || undefined,
+        apiKey || undefined
+      );
       console.log('Vault created:', config);
       console.log('Calling onComplete...');
       onComplete(config.vaultId, password);
@@ -207,12 +218,12 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
     <div className="vault-setup">
       <div className="setup-container">
         <h1>Welcome to Journal</h1>
-        <p className="subtitle">Configure your backend and create a secure vault</p>
+        <p className="subtitle">Create a secure vault to store your journal entries</p>
 
         {step === 'backend' ? (
           <div className="setup-form">
-            <h2>Backend Configuration</h2>
-            <p className="step-info">First, configure your Cloudflare Worker backend</p>
+            <h2>Cloud Sync (Optional)</h2>
+            <p className="step-info">Enable cloud sync to access your journal across devices</p>
             
             <div className="form-group">
               <label htmlFor="backendUrl">Backend URL</label>
@@ -241,9 +252,32 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
 
             {error && <div className="error">{error}</div>}
 
-            <button onClick={handleBackendSetup} className="primary-button">
-              Continue
-            </button>
+            <div className="button-group">
+              <button onClick={handleBackendSetup} className="primary-button">
+                Continue with Cloud Sync
+              </button>
+              <button 
+                onClick={() => {
+                  // Skip cloud sync - proceed to vault creation
+                  setBackendUrl('');
+                  setApiKey('');
+                  setStep('vault');
+                }} 
+                className="secondary-button"
+              >
+                Skip (Local Only)
+              </button>
+            </div>
+
+            <div className="info-section">
+              <p className="info-title">Local Only Mode:</p>
+              <ul className="info-list">
+                <li>✓ Your journal stays on this device</li>
+                <li>✓ Maximum privacy - no data leaves your computer</li>
+                <li>✓ No setup required - start journaling immediately</li>
+                <li>✓ You can enable cloud sync later in Settings</li>
+              </ul>
+            </div>
 
             <div className="help-section">
               <p>

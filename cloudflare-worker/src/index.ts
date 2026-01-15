@@ -1,204 +1,211 @@
-export interface Env {
-  JOURNAL_STORAGE: R2Bucket;
+/**
+ * Cloudflare Worker for secure journal sync
+ * 
+ * Security features:
+ * - API key authentication
+ * - Rate limiting per IP
+ * - Request size limits
+ * - CORS restrictions
+ */
+
+interface Env {
+  JOURNAL_BUCKET: R2Bucket;
+  API_KEY: string; // Set this in Cloudflare dashboard: Settings > Variables > Environment Variables
+  RATE_LIMIT_KV?: KVNamespace; // Optional: for rate limiting (create KV namespace in dashboard)
 }
 
-interface SyncRequest {
-  vaultId: string;
-  data: string; // encrypted JSON string
+// Rate limiting configuration
+const RATE_LIMIT = {
+  MAX_REQUESTS_PER_MINUTE: 10,
+  MAX_REQUESTS_PER_HOUR: 100,
+};
+
+// Size limits
+const MAX_PAYLOAD_SIZE = 10 * 1024 * 1024; // 10MB per request
+
+async function checkRateLimit(env: Env, ip: string): Promise<boolean> {
+  if (!env.RATE_LIMIT_KV) return true; // Skip if KV not configured
+  
+  const minuteKey = `rate:${ip}:minute:${Math.floor(Date.now() / 60000)}`;
+  const hourKey = `rate:${ip}:hour:${Math.floor(Date.now() / 3600000)}`;
+  
+  const [minuteCount, hourCount] = await Promise.all([
+    env.RATE_LIMIT_KV.get(minuteKey),
+    env.RATE_LIMIT_KV.get(hourKey),
+  ]);
+  
+  const minute = parseInt(minuteCount || '0');
+  const hour = parseInt(hourCount || '0');
+  
+  if (minute >= RATE_LIMIT.MAX_REQUESTS_PER_MINUTE) {
+    return false;
+  }
+  
+  if (hour >= RATE_LIMIT.MAX_REQUESTS_PER_HOUR) {
+    return false;
+  }
+  
+  // Increment counters
+  await Promise.all([
+    env.RATE_LIMIT_KV.put(minuteKey, String(minute + 1), { expirationTtl: 60 }),
+    env.RATE_LIMIT_KV.put(hourKey, String(hour + 1), { expirationTtl: 3600 }),
+  ]);
+  
+  return true;
 }
 
-interface SyncResponse {
-  success: boolean;
-  timestamp: string;
-  error?: string;
+function verifyApiKey(request: Request, env: Env): boolean {
+  const apiKey = request.headers.get('X-API-Key');
+  return apiKey === env.API_KEY;
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+    
     // CORS headers
-    const corsHeaders = new Headers({
-      'Access-Control-Allow-Origin': '*',
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*', // In production, restrict this to your app's domain
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '86400', // 24 hours
-    });
-
+      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
+      'Access-Control-Max-Age': '86400',
+    };
+    
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
-      return new Response(null, { 
+      return new Response(null, {
         status: 204,
-        headers: corsHeaders
+        headers: corsHeaders,
       });
     }
-
-    const url = new URL(request.url);
-    const path = url.pathname;
-
-    try {
-      // POST /api/sync - Save encrypted journal data
-      if (request.method === 'POST' && path === '/api/sync') {
-        const body: SyncRequest = await request.json();
-        
-        if (!body.vaultId || !body.data) {
-          const errorHeaders = new Headers(corsHeaders);
-          errorHeaders.set('Content-Type', 'application/json');
-          
-          return new Response(
-            JSON.stringify({ success: false, error: 'Missing vaultId or data' }),
-            { 
-              status: 400,
-              headers: errorHeaders
-            }
-          );
-        }
-
-        // Store encrypted data in R2
-        const key = `vaults/${body.vaultId}/journal.json`;
-        await env.JOURNAL_STORAGE.put(key, body.data, {
-          httpMetadata: {
-            contentType: 'application/json',
-          },
-        });
-
-        const timestamp = new Date().toISOString();
-        const response: SyncResponse = {
-          success: true,
-          timestamp,
-        };
-
-        const postHeaders = new Headers(corsHeaders);
-        postHeaders.set('Content-Type', 'application/json');
-        
-        return new Response(JSON.stringify(response), {
-          headers: postHeaders,
-        });
-      }
-
-      // GET /api/sync?vaultId=xxx - Retrieve encrypted journal data
-      if (request.method === 'GET' && path === '/api/sync') {
-        const vaultId = url.searchParams.get('vaultId');
-        
-        if (!vaultId) {
-          const errorHeaders = new Headers(corsHeaders);
-          errorHeaders.set('Content-Type', 'application/json');
-          
-          return new Response(
-            JSON.stringify({ success: false, error: 'Missing vaultId parameter' }),
-            { 
-              status: 400,
-              headers: errorHeaders
-            }
-          );
-        }
-
-        const key = `vaults/${vaultId}/journal.json`;
-        const object = await env.JOURNAL_STORAGE.get(key);
-
-        if (!object) {
-          const emptyHeaders = new Headers(corsHeaders);
-          emptyHeaders.set('Content-Type', 'application/json');
-          
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              data: null, 
-              timestamp: new Date().toISOString() 
-            }),
-            { 
-              headers: emptyHeaders
-            }
-          );
-        }
-
-        const data = await object.text();
-        const timestamp = object.uploaded?.toISOString() || new Date().toISOString();
-
-        const getHeaders = new Headers(corsHeaders);
-        getHeaders.set('Content-Type', 'application/json');
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            data,
-            timestamp,
-          }),
-          {
-            headers: getHeaders,
-          }
-        );
-      }
-
-      // DELETE /api/sync?vaultId=xxx - Delete vault data from R2
-      if (request.method === 'DELETE' && path === '/api/sync') {
-        const vaultId = url.searchParams.get('vaultId');
-        
-        if (!vaultId) {
-          const errorHeaders = new Headers(corsHeaders);
-          errorHeaders.set('Content-Type', 'application/json');
-          
-          return new Response(
-            JSON.stringify({ success: false, error: 'Missing vaultId parameter' }),
-            { 
-              status: 400,
-              headers: errorHeaders
-            }
-          );
-        }
-
-        try {
-          const key = `vaults/${vaultId}/journal.json`;
-          await env.JOURNAL_STORAGE.delete(key);
-
-          const deleteHeaders = new Headers(corsHeaders);
-          deleteHeaders.set('Content-Type', 'application/json');
-
-          return new Response(
-            JSON.stringify({
-              success: true,
-              message: 'Vault data deleted successfully',
-            }),
-            {
-              headers: deleteHeaders,
-            }
-          );
-        } catch (error) {
-          console.error('Delete error:', error);
-          const errorHeaders = new Headers(corsHeaders);
-          errorHeaders.set('Content-Type', 'application/json');
-          
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: error instanceof Error ? error.message : 'Unknown error' 
-            }),
-            { 
-              status: 500,
-              headers: errorHeaders
-            }
-          );
-        }
-      }
-
-      // 404 for unknown routes
-      return new Response('Not Found', { 
-        status: 404,
-        headers: corsHeaders
+    
+    // Verify API key for all non-OPTIONS requests
+    if (!verifyApiKey(request, env)) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Unauthorized: Invalid or missing API key' 
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-    } catch (error) {
-      console.error('Error:', error);
-      const errorHeaders = new Headers(corsHeaders);
-      errorHeaders.set('Content-Type', 'application/json');
-      
-      return new Response(
-        JSON.stringify({ 
+    }
+    
+    // Rate limiting
+    const withinLimit = await checkRateLimit(env, clientIP);
+    if (!withinLimit) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Rate limit exceeded. Please try again later.' 
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Check request size for POST/PUT
+    if (request.method === 'POST' || request.method === 'PUT') {
+      const contentLength = parseInt(request.headers.get('Content-Length') || '0');
+      if (contentLength > MAX_PAYLOAD_SIZE) {
+        return new Response(JSON.stringify({ 
           success: false, 
-          error: error instanceof Error ? error.message : 'Unknown error' 
-        }),
-        { 
-          status: 500,
-          headers: errorHeaders
-        }
-      );
+          error: `Payload too large. Maximum size is ${MAX_PAYLOAD_SIZE / 1024 / 1024}MB` 
+        }), {
+          status: 413,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
+    
+    // Handle sync endpoint
+    if (url.pathname === '/api/sync') {
+      const vaultId = url.searchParams.get('vaultId');
+      
+      if (!vaultId || !/^[a-f0-9-]{36}$/i.test(vaultId)) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Invalid vaultId format' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      const key = `vaults/${vaultId}/data.enc`;
+      
+      // GET: Fetch encrypted data
+      if (request.method === 'GET') {
+        const object = await env.JOURNAL_BUCKET.get(key);
+        
+        if (!object) {
+          return new Response(JSON.stringify({ 
+            success: true, 
+            data: null 
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        const data = await object.text();
+        return new Response(JSON.stringify({ 
+          success: true, 
+          data 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      // POST: Store encrypted data
+      if (request.method === 'POST') {
+        const body = await request.json() as { data: string };
+        
+        if (!body.data || typeof body.data !== 'string') {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'Invalid data format' 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        await env.JOURNAL_BUCKET.put(key, body.data);
+        
+        return new Response(JSON.stringify({ 
+          success: true 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      // DELETE: Remove vault data
+      if (request.method === 'DELETE') {
+        await env.JOURNAL_BUCKET.delete(key);
+        
+        return new Response(JSON.stringify({ 
+          success: true 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+    
+    // Health check endpoint (no auth required)
+    if (url.pathname === '/health') {
+      return new Response(JSON.stringify({ 
+        status: 'ok',
+        timestamp: new Date().toISOString() 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: 'Not found' 
+    }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   },
 };

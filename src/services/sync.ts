@@ -1,4 +1,17 @@
 const SYNC_API_URL = 'https://journal-sync.mvlab.workers.dev';
+const API_KEY = import.meta.env.VITE_API_KEY || '';
+
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (API_KEY) {
+    headers['X-API-Key'] = API_KEY;
+  }
+  
+  return headers;
+}
 
 export interface SyncResponse {
   success: boolean;
@@ -17,9 +30,7 @@ export async function syncToCloud(
   try {
     const response = await fetch(`${SYNC_API_URL}/api/sync`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getHeaders(),
       body: JSON.stringify({
         vaultId,
         data: encryptedData,
@@ -47,7 +58,10 @@ export async function syncFromCloud(
 ): Promise<SyncResponse> {
   try {
     const response = await fetch(
-      `${SYNC_API_URL}/api/sync?vaultId=${encodeURIComponent(vaultId)}`
+      `${SYNC_API_URL}/api/sync?vaultId=${encodeURIComponent(vaultId)}`,
+      {
+        headers: getHeaders(),
+      }
     );
 
     if (!response.ok) {
@@ -74,6 +88,7 @@ export async function deleteFromCloud(
       `${SYNC_API_URL}/api/sync?vaultId=${encodeURIComponent(vaultId)}`,
       {
         method: 'DELETE',
+        headers: getHeaders(),
       }
     );
 

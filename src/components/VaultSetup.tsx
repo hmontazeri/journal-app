@@ -629,6 +629,60 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
           opacity: 0.6;
           cursor: not-allowed;
         }
+
+        .info-section {
+          margin-top: 1.5rem;
+          padding: 1rem;
+          background: rgba(var(--accent-rgb), 0.05);
+          border: 1px solid rgba(var(--accent-rgb), 0.2);
+          border-radius: 8px;
+        }
+
+        .info-title {
+          margin: 0 0 0.75rem 0;
+          font-weight: 500;
+          color: var(--text-primary);
+          font-size: 0.9375rem;
+        }
+
+        .info-list {
+          margin: 0;
+          padding-left: 1.25rem;
+          list-style: none;
+        }
+
+        .info-list li {
+          margin-bottom: 0.5rem;
+          color: var(--text-secondary);
+          font-size: 0.9375rem;
+          line-height: 1.5;
+        }
+
+        .info-list li:last-child {
+          margin-bottom: 0;
+        }
+
+        .help-section {
+          margin-top: 1.5rem;
+          padding-top: 1.5rem;
+          border-top: 1px solid var(--border);
+          text-align: center;
+        }
+
+        .help-section p {
+          margin: 0;
+          color: var(--text-secondary);
+          font-size: 0.875rem;
+        }
+
+        .help-section a {
+          color: var(--accent);
+          text-decoration: none;
+        }
+
+        .help-section a:hover {
+          text-decoration: underline;
+        }
       `}</style>
     </div>
   );

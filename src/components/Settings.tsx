@@ -1,30 +1,94 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getVaultConfig, saveVaultConfig } from '../services/storage';
+import { VaultConfig } from '../types';
 
 interface SettingsProps {
   onClose: () => void;
 }
 
 export function Settings({ onClose }: SettingsProps) {
-  const [apiKey, setApiKey] = useState(() => {
-    return localStorage.getItem('user_api_key') || import.meta.env.VITE_API_KEY || '';
-  });
+  const [backendUrl, setBackendUrl] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSave = () => {
-    localStorage.setItem('user_api_key', apiKey);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-    
-    // Reload the page to pick up the new API key
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const config = await getVaultConfig();
+      if (config) {
+        setBackendUrl(config.backendUrl || '');
+        setApiKey(config.apiKey || '');
+      }
+    } catch (err) {
+      console.error('Failed to load settings:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleClear = () => {
-    localStorage.removeItem('user_api_key');
-    setApiKey('');
+  const handleSave = async () => {
+    setError('');
+
+    if (!backendUrl.trim()) {
+      setError('Backend URL is required');
+      return;
+    }
+
+    try {
+      new URL(backendUrl);
+    } catch {
+      setError('Invalid URL format');
+      return;
+    }
+
+    if (!apiKey.trim()) {
+      setError('API Key is required');
+      return;
+    }
+
+    try {
+      const config = await getVaultConfig();
+      if (!config) {
+        setError('No vault configuration found');
+        return;
+      }
+
+      const updatedConfig: VaultConfig = {
+        ...config,
+        backendUrl,
+        apiKey,
+      };
+
+      await saveVaultConfig(updatedConfig);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      
+      // Reload the page to pick up the new configuration
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (err) {
+      setError('Failed to save settings');
+      console.error('Save error:', err);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="settings-overlay">
+        <div className="settings-dialog">
+          <div className="settings-content">
+            Loading...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="settings-overlay">
@@ -41,10 +105,22 @@ export function Settings({ onClose }: SettingsProps) {
 
         <div className="settings-content">
           <div className="setting-section">
-            <h3>Cloud Sync Configuration</h3>
+            <h3>Backend Configuration</h3>
             <p className="setting-description">
-              Enter your Cloudflare Worker API key to enable cloud sync.
+              Configure your cloud sync backend
             </p>
+
+            <div className="form-group">
+              <label htmlFor="backendUrl">Backend URL</label>
+              <input
+                id="backendUrl"
+                type="url"
+                value={backendUrl}
+                onChange={(e) => setBackendUrl(e.target.value)}
+                placeholder="https://your-worker.workers.dev"
+              />
+              <small>Your Cloudflare Worker URL</small>
+            </div>
 
             <div className="form-group">
               <label htmlFor="apiKey">API Key</label>
@@ -56,34 +132,32 @@ export function Settings({ onClose }: SettingsProps) {
                 placeholder="Enter your API key"
               />
               <small>
-                Don't have an API key? 
+                From your Cloudflare Worker dashboard.{' '}
                 <a 
                   href="https://github.com/hmontazeri/journal-app/blob/main/cloudflare-worker/SECURITY_SETUP.md" 
                   target="_blank" 
                   rel="noopener noreferrer"
                 >
-                  {' '}Setup instructions
+                  Setup instructions
                 </a>
               </small>
             </div>
 
-            <div className="button-group">
-              <button className="primary-button" onClick={handleSave}>
-                {saved ? '✓ Saved!' : 'Save API Key'}
-              </button>
-              {apiKey && (
-                <button className="secondary-button" onClick={handleClear}>
-                  Clear API Key
-                </button>
-              )}
-            </div>
-
-            {!apiKey && (
-              <div className="info-box">
-                <strong>Note:</strong> Without an API key, the app will work in offline-only mode. 
-                Your journal entries will be stored locally but won't sync to the cloud.
+            {error && (
+              <div className="error-box">
+                {error}
               </div>
             )}
+
+            <div className="button-group">
+              <button className="primary-button" onClick={handleSave}>
+                {saved ? '✓ Saved!' : 'Save Settings'}
+              </button>
+            </div>
+
+            <div className="warning-box">
+              <strong>Warning:</strong> Changing these settings will require restarting the app to take effect.
+            </div>
           </div>
         </div>
       </div>

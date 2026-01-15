@@ -1,195 +1,103 @@
 # Journal
 
-A beautiful minimalist daily journaling app for macOS, built with Tauri 2.0.
+A beautiful, minimalist journaling app built with Tauri 2.0. Your thoughts, encrypted and synced to your own cloud backend.
 
-## Features
+## ✨ Features
 
-- **Rich Text Editor** - Write with a WYSIWYG editor powered by TipTap
-- **Mood Tracking** - Track your mood on a scale of 1-10
-- **Tags** - Organize entries with tags
-- **Date Navigation** - Easily browse your journal history
-- **🔒 Secure Cloud Sync** - Client-side AES-256-GCM encryption with Cloudflare Workers + R2
-- **Offline First** - Works offline, syncs when online
-- **Beautiful Design** - Minimalist UI with elegant font pairing and dark mode support
-- **Cross-Device** - Sync between multiple Macs securely
+- **End-to-End Encryption**: AES-256-GCM encryption with PBKDF2 key derivation
+- **Rich Text Editor**: Beautiful WYSIWYG editor with markdown support
+- **Mood & Energy Tracking**: Track your emotional state and energy levels
+- **Tags & Organization**: Organize entries with custom tags
+- **Cloud Sync**: Sync to your own Cloudflare Worker backend
+- **Cross-Platform**: Works on macOS, Windows, and Linux
+- **Offline First**: Write anytime, sync when online
+- **Dark Mode**: Automatic system-based theme switching
 
-## Quick Start
+## 🚀 Quick Start
 
-### For Users
+### For End Users
 
-1. Download the latest release from [GitHub Releases](https://github.com/hmontazeri/journal-app/releases)
-2. Install the app
-3. On first launch, create a new vault or connect to an existing one
-4. Start journaling!
+1. **Download the latest release** from the [Releases page](https://github.com/hmontazeri/journal-app/releases)
+2. **Install** the app for your platform
+3. **Set up your backend**:
+   - Deploy the Cloudflare Worker (see [Backend Setup](#backend-setup))
+   - Or use an existing backend if shared with you
+4. **Launch the app** and enter your backend URL and API key
+5. **Create a new vault** or connect to an existing one
 
 ### For Developers
 
 ```bash
+# Clone the repository
+git clone https://github.com/hmontazeri/journal-app.git
+cd journal-app
+
 # Install dependencies
 npm install
 
-# Start development server
+# Run in development mode
 npm run tauri dev
 
 # Build for production
 npm run tauri build
 ```
 
-## Security & Cloud Sync Setup
+## 🔐 Backend Setup
 
-⚠️ **IMPORTANT**: Before deploying, you must set up security to prevent API abuse.
+This app requires a cloud backend for syncing. We recommend using Cloudflare Workers (free tier available).
 
-### 1. Generate an API Key
+### Deploy Cloudflare Worker
 
-```bash
-# Generate a secure API key
-openssl rand -base64 32
-```
+1. **Sign up** for [Cloudflare](https://cloudflare.com) (free tier is sufficient)
+2. **Install Wrangler CLI**:
+   ```bash
+   npm install -g wrangler
+   wrangler login
+   ```
+3. **Deploy the worker**:
+   ```bash
+   cd cloudflare-worker
+   wrangler deploy
+   ```
+4. **Configure security** (important!):
+   - Set an API key: `wrangler secret put API_KEY`
+   - Optionally set up rate limiting (see [Security Setup](./cloudflare-worker/SECURITY_SETUP.md))
+5. **Copy your worker URL** (e.g., `https://journal-sync.your-subdomain.workers.dev`)
 
-### 2. Set Up Cloudflare Worker
+### Use in the App
 
-See detailed instructions in [`cloudflare-worker/SECURITY_SETUP.md`](./cloudflare-worker/SECURITY_SETUP.md)
+When you first launch the app, you'll be prompted to enter:
+- **Backend URL**: Your Cloudflare Worker URL
+- **API Key**: The API key you set in step 4
 
-Quick steps:
-1. Create API key and add to Cloudflare Worker environment variables
-2. (Optional) Set up KV namespace for rate limiting
-3. Deploy worker: `cd cloudflare-worker && npm run deploy`
+These settings can be changed later in the Settings dialog (⚙️ icon in sidebar).
 
-### 3. Configure Your App
+## 📖 Documentation
 
-```bash
-# Copy example env file
-cp .env.example .env.local
+- [Cloudflare Worker Security Setup](./cloudflare-worker/SECURITY_SETUP.md)
+- [Version Management](./VERSIONING.md)
+- [Automation Guide](./AUTOMATION.md)
 
-# Edit .env.local and add your API key
-VITE_API_KEY=your-api-key-here
-```
+## 🛠️ Tech Stack
 
-**Never commit `.env.local` to git!**
-
-## Architecture
-
-- **Frontend**: React + TypeScript
+- **Frontend**: React + TypeScript + Vite
 - **Backend**: Tauri 2.0 (Rust)
-- **Cloud Sync**: Cloudflare Workers + R2
-- **Encryption**: Client-side AES-256-GCM, PBKDF2 key derivation
-- **Storage**: Local file system (macOS app data directory)
+- **Editor**: TipTap
+- **Cloud**: Cloudflare Workers + R2
+- **Encryption**: Web Crypto API (AES-256-GCM, PBKDF2)
 
-## Security Features
+## 📝 License
 
-✅ **End-to-End Encryption** - Data is encrypted on your device before upload  
-✅ **API Key Authentication** - Only authorized apps can access your cloud storage  
-✅ **Rate Limiting** - Prevents abuse (10 requests/min, 100 requests/hour)  
-✅ **Request Size Limits** - Maximum 10MB per request  
-✅ **VaultId Validation** - Only valid UUIDs accepted  
-✅ **Zero-Knowledge** - Server never sees your unencrypted data  
+MIT
 
-## Development
+## 🙏 Contributing
 
-### Version Management
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-See [VERSIONING.md](./VERSIONING.md) for details on the automated version management system.
+## 🔒 Security
 
-Quick version bump:
-
-```bash
-# Bump version and create tag
-npm version patch -m "chore: release v%s"
-
-# Push to trigger release build
-git push origin main --tags
-```
-
-### Code Quality
-
-The project uses automated linting and type checking:
-
-- **Pre-commit hook** - TypeScript type checking before each commit
-- **Pre-push hook** - Version sync verification before push
-- **GitHub Actions CI** - Automated testing on every push
-
-### Release Process
-
-1. Update version: `npm version patch/minor/major`
-2. Push with tags: `git push origin main --tags`
-3. GitHub Actions automatically builds and publishes releases for all platforms
-
-## Project Structure
-
-```
-journal/
-├── src/                      # React frontend
-│   ├── components/          # UI components
-│   ├── hooks/               # React hooks
-│   ├── services/            # API services
-│   └── utils/               # Utility functions
-├── src-tauri/               # Tauri backend
-│   ├── src/                 # Rust code
-│   ├── icons/               # App icons
-│   └── capabilities/        # Tauri permissions
-├── cloudflare-worker/       # Sync API
-│   └── src/                 # Worker code
-├── scripts/                 # Build scripts
-└── docs/                    # GitHub Pages landing page
-```
-
-## Documentation
-
-- [VERSIONING.md](./VERSIONING.md) - Version management workflow
-- [AUTOMATION.md](./AUTOMATION.md) - Development automation
-- [cloudflare-worker/SECURITY_SETUP.md](./cloudflare-worker/SECURITY_SETUP.md) - Security configuration
-- [SETUP_COMPLETE.md](./SETUP_COMPLETE.md) - Initial setup guide
-
-## Cost Estimates
-
-Using Cloudflare's free tier:
-
-- **Workers**: 100,000 requests/day (free)
-- **R2 Storage**: 10GB (free)
-- **R2 Operations**: 1M Class A, 10M Class B per month (free)
-
-**Typical Usage** (1 user, daily journaling):
-- ~10 requests/day (sync operations)
-- ~1MB storage/year
-- **Cost: $0/month** (well within free tier)
-
-## Troubleshooting
-
-### API Key Errors
-
-If you see "Unauthorized" errors:
-1. Ensure API key is set in Cloudflare Worker settings
-2. Ensure API key is set in your app's `.env.local`
-3. Rebuild your app: `npm run tauri dev`
-
-### Rate Limit Errors
-
-If you see "Rate limit exceeded":
-- Wait 1 minute or 1 hour (depending on the limit)
-- Check if KV namespace is properly bound to your worker
-- Adjust limits in `cloudflare-worker/src/index.ts` if needed
-
-### Data Not Syncing
-
-1. Check your internet connection
-2. Open Developer Tools (View → Developer → Toggle Developer Tools)
-3. Look for sync errors in the Console tab
-4. Verify your API key is configured correctly
-
-## Privacy
-
-- Your journal data is encrypted on your device before upload
-- The server only stores encrypted data
-- Only you have the encryption key (your password)
-- We cannot read your journal entries
-- No analytics or tracking
-
-## License
-
-Private project by Hamed Montazeri
-
-## Support
-
-For issues and questions:
-- Open an issue on [GitHub](https://github.com/hmontazeri/journal-app/issues)
-- Check existing documentation in this repository
+- All journal data is encrypted client-side before leaving your device
+- Your password never leaves your device
+- Encryption keys are derived from your password using PBKDF2 (100,000 iterations)
+- Data is stored in Cloudflare R2 as encrypted blobs
+- You control your own backend and API keys

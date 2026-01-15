@@ -27,23 +27,36 @@ export function useVault() {
     }
   };
 
-  const createVault = async (): Promise<VaultConfig> => {
+  const createVault = async (backendUrl: string, apiKey: string): Promise<VaultConfig> => {
     const newConfig: VaultConfig = {
       vaultId: generateUUID(),
       createdAt: new Date().toISOString(),
+      backendUrl,
+      apiKey,
     };
     await saveVaultConfig(newConfig);
     setVaultConfig(newConfig);
+    
+    // Clear temporary storage
+    localStorage.removeItem('temp_backend_url');
+    localStorage.removeItem('temp_api_key');
+    
     return newConfig;
   };
 
-  const setupExistingVault = async (vaultId: string): Promise<void> => {
+  const setupExistingVault = async (vaultId: string, backendUrl: string, apiKey: string): Promise<void> => {
     const config: VaultConfig = {
       vaultId,
       createdAt: new Date().toISOString(), // We don't know the real creation date
+      backendUrl,
+      apiKey,
     };
     await saveVaultConfig(config);
     setVaultConfig(config);
+    
+    // Clear temporary storage
+    localStorage.removeItem('temp_backend_url');
+    localStorage.removeItem('temp_api_key');
   };
 
   const unlock = () => {

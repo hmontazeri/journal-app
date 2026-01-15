@@ -1,23 +1,31 @@
-const SYNC_API_URL = 'https://journal-sync.mvlab.workers.dev';
+import { getVaultConfig } from './storage';
 
-function getApiKey(): string {
-  // Priority: User-provided key > Embedded key > Empty
-  const userKey = localStorage.getItem('user_api_key');
-  const embeddedKey = import.meta.env.VITE_API_KEY || '';
-  return userKey || embeddedKey;
+async function getBackendConfig(): Promise<{ url: string; apiKey: string }> {
+  // Try to get from vault config first
+  const vaultConfig = await getVaultConfig();
+  if (vaultConfig?.backendUrl && vaultConfig?.apiKey) {
+    return {
+      url: vaultConfig.backendUrl,
+      apiKey: vaultConfig.apiKey
+    };
+  }
+
+  // Fallback to temporary storage (during setup)
+  const tempUrl = localStorage.getItem('temp_backend_url');
+  const tempKey = localStorage.getItem('temp_api_key');
+  
+  if (tempUrl && tempKey) {
+    return { url: tempUrl, apiKey: tempKey };
+  }
+
+  throw new Error('Backend configuration not found. Please configure in Settings.');
 }
 
-function getHeaders(): HeadersInit {
-  const headers: HeadersInit = {
+function getHeaders(apiKey: string): HeadersInit {
+  return {
     'Content-Type': 'application/json',
+    'X-API-Key': apiKey,
   };
-  
-  const apiKey = getApiKey();
-  if (apiKey) {
-    headers['X-API-Key'] = apiKey;
-  }
-  
-  return headers;
 }
 
 export interface SyncResponse {
@@ -28,48 +36,24 @@ export interface SyncResponse {
 }
 
 /**
- * Sync encrypted journal data to Cloudflare Worker
+ * Sync encrypted journal data to cloud backend
  */
 export async function syncToCloud(
   vaultId: string,
-  encryptedData: string
+  encryptedData: string,
+  backendUrl?: string,
+  apiKey?: string
 ): Promise<SyncResponse> {
   try {
-    const response = await fetch(`${SYNC_API_URL}/api/sync`, {
+    const config = backendUrl && apiKey 
+      ? { url: backendUrl, apiKey }
+      : await getBackendConfig();
+
+    const response = await fetch(`${config.url}/sync/${vaultId}`, {
       method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({
-        vaultId,
-        data: encryptedData,
-      }),
+      headers: getHeaders(config.apiKey),
+      body: JSON.stringify({ data: encryptedData }),
     });
-
-    if (!response.ok) {
-      throw new Error(`Sync failed: ${response.statusText}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}
-
-/**
- * Retrieve encrypted journal data from Cloudflare Worker
- */
-export async function syncFromCloud(
-  vaultId: string
-): Promise<SyncResponse> {
-  try {
-    const response = await fetch(
-      `${SYNC_API_URL}/api/sync?vaultId=${encodeURIComponent(vaultId)}`,
-      {
-        headers: getHeaders(),
-      }
-    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -81,7 +65,53 @@ export async function syncFromCloud(
           errorMessage = errorJson.error;
         }
       } catch {
-        // If not JSON, use the text
+        if (errorText) {
+          errorMessage = errorText;
+        }
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Sync to cloud error:', errorMessage);
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Retrieve encrypted journal data from cloud backend
+ */
+export async function syncFromCloud(
+  vaultId: string,
+  backendUrl?: string,
+  apiKey?: string
+): Promise<SyncResponse> {
+  try {
+    const config = backendUrl && apiKey 
+      ? { url: backendUrl, apiKey }
+      : await getBackendConfig();
+
+    const response = await fetch(`${config.url}/sync/${vaultId}`, {
+      method: 'GET',
+      headers: getHeaders(config.apiKey),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = `Sync failed: ${response.statusText}`;
+      
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error) {
+          errorMessage = errorJson.error;
+        }
+      } catch {
         if (errorText) {
           errorMessage = errorText;
         }
@@ -102,19 +132,22 @@ export async function syncFromCloud(
 }
 
 /**
- * Delete vault data from Cloudflare Worker
+ * Delete vault data from cloud backend
  */
 export async function deleteFromCloud(
-  vaultId: string
+  vaultId: string,
+  backendUrl?: string,
+  apiKey?: string
 ): Promise<SyncResponse> {
   try {
-    const response = await fetch(
-      `${SYNC_API_URL}/api/sync?vaultId=${encodeURIComponent(vaultId)}`,
-      {
-        method: 'DELETE',
-        headers: getHeaders(),
-      }
-    );
+    const config = backendUrl && apiKey 
+      ? { url: backendUrl, apiKey }
+      : await getBackendConfig();
+
+    const response = await fetch(`${config.url}/sync/${vaultId}`, {
+      method: 'DELETE',
+      headers: getHeaders(config.apiKey),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -126,7 +159,6 @@ export async function deleteFromCloud(
           errorMessage = errorJson.error;
         }
       } catch {
-        // If not JSON, use the text
         if (errorText) {
           errorMessage = errorText;
         }

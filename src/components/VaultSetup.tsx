@@ -13,10 +13,40 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [vaultId, setVaultId] = useState('');
+  const [backendUrl, setBackendUrl] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [vaultVerified, setVaultVerified] = useState(false);
   const [checkingVault, setCheckingVault] = useState(false);
+  const [step, setStep] = useState<'backend' | 'vault'>('backend');
+
+  const handleBackendSetup = () => {
+    setError('');
+
+    if (!backendUrl.trim()) {
+      setError('Backend URL is required');
+      return;
+    }
+
+    try {
+      new URL(backendUrl);
+    } catch {
+      setError('Invalid URL format');
+      return;
+    }
+
+    if (!apiKey.trim()) {
+      setError('API Key is required');
+      return;
+    }
+
+    // Save backend config to localStorage temporarily
+    localStorage.setItem('temp_backend_url', backendUrl);
+    localStorage.setItem('temp_api_key', apiKey);
+
+    setStep('vault');
+  };
 
   const handleCreateVault = async () => {
     setError('');
@@ -33,7 +63,7 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
 
     try {
       console.log('Creating vault...');
-      const config = await createVault();
+      const config = await createVault(backendUrl, apiKey);
       console.log('Vault created:', config);
       console.log('Calling onComplete...');
       onComplete(config.vaultId, password);
@@ -151,7 +181,7 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
         await decrypt(response.data, password);
         console.log('[VaultSetup] Decryption successful!');
         // Password is correct - set up the vault
-        await setupExistingVault(vaultId.trim());
+        await setupExistingVault(vaultId.trim(), backendUrl, apiKey);
         onComplete(vaultId.trim(), password);
       } catch (decryptError) {
         // Password is incorrect
@@ -177,66 +207,123 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
     <div className="vault-setup">
       <div className="setup-container">
         <h1>Welcome to Journal</h1>
-        <p className="subtitle">Create a secure vault to store your journal entries</p>
+        <p className="subtitle">Configure your backend and create a secure vault</p>
 
-        <div className="mode-toggle">
-          <button
-            className={mode === 'new' ? 'active' : ''}
-            onClick={() => {
-              setMode('new');
-              setVaultVerified(false);
-              setVaultId('');
-              setPassword('');
-              setConfirmPassword('');
-              setError('');
-            }}
-          >
-            New Vault
-          </button>
-          <button
-            className={mode === 'existing' ? 'active' : ''}
-            onClick={() => {
-              setMode('existing');
-              setVaultVerified(false);
-              setVaultId('');
-              setPassword('');
-              setConfirmPassword('');
-              setError('');
-            }}
-          >
-            Existing Vault
-          </button>
-        </div>
-
-        {mode === 'new' ? (
+        {step === 'backend' ? (
           <div className="setup-form">
+            <h2>Backend Configuration</h2>
+            <p className="step-info">First, configure your Cloudflare Worker backend</p>
+            
             <div className="form-group">
-              <label htmlFor="password">Create Password</label>
+              <label htmlFor="backendUrl">Backend URL</label>
               <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
+                id="backendUrl"
+                type="url"
+                value={backendUrl}
+                onChange={(e) => setBackendUrl(e.target.value)}
+                placeholder="https://your-worker.workers.dev"
                 autoFocus
               />
+              <small>Your Cloudflare Worker URL</small>
             </div>
+            
             <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password</label>
+              <label htmlFor="apiKey">API Key</label>
               <input
-                id="confirmPassword"
+                id="apiKey"
                 type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter your password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Enter your API key"
               />
+              <small>From your Cloudflare Worker dashboard</small>
             </div>
+
             {error && <div className="error">{error}</div>}
-            <button onClick={handleCreateVault} className="primary-button">
-              Create Vault
+
+            <button onClick={handleBackendSetup} className="primary-button">
+              Continue
             </button>
+
+            <div className="help-section">
+              <p>
+                Don't have a backend yet?{' '}
+                <a 
+                  href="https://github.com/hmontazeri/journal-app/blob/main/cloudflare-worker/SECURITY_SETUP.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Setup instructions
+                </a>
+              </p>
+            </div>
           </div>
         ) : (
+          <>
+            <div className="mode-toggle">
+              <button
+                className={mode === 'new' ? 'active' : ''}
+                onClick={() => {
+                  setMode('new');
+                  setVaultVerified(false);
+                  setVaultId('');
+                  setPassword('');
+                  setConfirmPassword('');
+                  setError('');
+                }}
+              >
+                New Vault
+              </button>
+              <button
+                className={mode === 'existing' ? 'active' : ''}
+                onClick={() => {
+                  setMode('existing');
+                  setVaultVerified(false);
+                  setVaultId('');
+                  setPassword('');
+                  setConfirmPassword('');
+                  setError('');
+                }}
+              >
+                Existing Vault
+              </button>
+            </div>
+
+            {mode === 'new' ? (
+              <div className="setup-form">
+                <div className="form-group">
+                  <label htmlFor="password">Create Password</label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 8 characters"
+                    autoFocus
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="confirmPassword">Confirm Password</label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter your password"
+                  />
+                </div>
+                {error && <div className="error">{error}</div>}
+                <button onClick={handleCreateVault} className="primary-button">
+                  Create Vault
+                </button>
+                <button 
+                  onClick={() => setStep('backend')} 
+                  className="back-button"
+                >
+                  ← Back to backend setup
+                </button>
+              </div>
+            ) : (
           <div className="setup-form">
             {!vaultVerified ? (
               // Step 1: Check if vault exists
@@ -302,7 +389,16 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
                 </div>
               </>
             )}
+            <button 
+              onClick={() => setStep('backend')} 
+              className="back-button secondary-back"
+              style={{ marginTop: '1rem' }}
+            >
+              ← Back to backend setup
+            </button>
           </div>
+        )}
+          </>
         )}
       </div>
 

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getVersion } from '@tauri-apps/api/app';
 import { VaultConfig } from '../types';
 import { useJournal } from '../hooks/useJournal';
 import { syncFromCloud, deleteFromCloud } from '../services/sync';
@@ -14,6 +15,11 @@ export function UserInfoDialog({ vaultConfig, onClose, onDeleteServerData }: Use
   const { journalData } = useJournal();
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [appVersion, setAppVersion] = useState<string>('');
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => setAppVersion('Unknown'));
+  }, []);
 
   const handleCopyVaultId = async () => {
     if (vaultConfig?.vaultId) {
@@ -164,6 +170,16 @@ export function UserInfoDialog({ vaultConfig, onClose, onDeleteServerData }: Use
                     day: 'numeric',
                   })}
                 </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="info-section">
+            <h3>About</h3>
+            <div className="vault-meta">
+              <div className="meta-item">
+                <span className="meta-label">App Version</span>
+                <span className="meta-value">{appVersion}</span>
               </div>
             </div>
           </div>

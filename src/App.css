@@ -80,7 +80,7 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   align-items: center;
   position: relative;
-  padding-top: 4rem;
+  padding-top: 1rem;
   padding-bottom: 2rem;
   padding-left: 1rem;
   padding-right: 1rem;
@@ -111,7 +111,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .view-toggle {
-  position: absolute;
+  position: sticky;
   top: 1rem;
   left: 50%;
   transform: translateX(-50%);
@@ -123,6 +123,8 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 8px;
   border: 1px solid var(--border);
   box-shadow: 0 2px 4px var(--shadow);
+  margin-bottom: 1rem;
+  align-self: center;
 }
 
 .view-toggle button {

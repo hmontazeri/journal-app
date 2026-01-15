@@ -120,28 +120,48 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
 
     try {
       // Fetch encrypted data to verify password
+      console.log('[VaultSetup] Fetching data from cloud to verify password...');
       const response = await syncFromCloud(vaultId.trim());
+      console.log('[VaultSetup] Sync response:', { success: response.success, hasData: !!response.data, error: response.error });
       
-      if (!response.success || !response.data) {
-        setError('Failed to verify password. Please try again.');
+      if (!response.success) {
+        // Check specific error types
+        if (response.error?.includes('Unauthorized') || response.error?.includes('Invalid or missing API key')) {
+          setError('API key not configured. Please check the setup documentation.');
+        } else if (response.error?.includes('Rate limit')) {
+          setError('Rate limit exceeded. Please wait a moment and try again.');
+        } else {
+          setError(`Failed to verify password: ${response.error || 'Unknown error'}`);
+        }
+        setVerifying(false);
+        return;
+      }
+      
+      if (!response.data) {
+        // No data in cloud - this vault doesn't have any data yet or doesn't exist
+        // For security, we can't just let them in - but we can give a better error
+        setError('This vault has no data in the cloud. If this is a new vault, create it instead of connecting to it. If you expect data, check the vault ID.');
         setVerifying(false);
         return;
       }
 
       // Try to decrypt with the provided password
       try {
+        console.log('[VaultSetup] Attempting to decrypt data...');
         await decrypt(response.data, password);
+        console.log('[VaultSetup] Decryption successful!');
         // Password is correct - set up the vault
         await setupExistingVault(vaultId.trim());
         onComplete(vaultId.trim(), password);
       } catch (decryptError) {
         // Password is incorrect
+        console.error('[VaultSetup] Decryption failed:', decryptError);
         setError('Incorrect password. Please try again.');
         setVerifying(false);
       }
     } catch (err) {
-      setError('Failed to verify password. Please try again.');
-      console.error(err);
+      console.error('[VaultSetup] Password verification error:', err);
+      setError(`Failed to verify password: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setVerifying(false);
     }
   };

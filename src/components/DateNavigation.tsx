@@ -7,9 +7,10 @@ interface DateNavigationProps {
   onDateClick?: () => void;
   onSignOut?: () => void;
   onUserInfo?: () => void;
+  onSettings?: () => void;
 }
 
-export function DateNavigation({ currentDate, onDateChange, hasEntry, onDateClick, onSignOut, onUserInfo }: DateNavigationProps) {
+export function DateNavigation({ currentDate, onDateChange, hasEntry, onDateClick, onSignOut, onUserInfo, onSettings }: DateNavigationProps) {
   const goToPreviousDay = () => {
     const targetDate = parseDateString(currentDate);
     targetDate.setDate(targetDate.getDate() - 1);
@@ -54,6 +55,28 @@ export function DateNavigation({ currentDate, onDateChange, hasEntry, onDateClic
 
       {(onUserInfo || onSignOut) && (
         <div className="sidebar-footer">
+          {onSettings && (
+            <button 
+              onClick={onSettings} 
+              className="settings-button"
+              title="Settings"
+            >
+              <svg 
+                className="settings-icon" 
+                width="20" 
+                height="20" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6m0 6v6m10-7h-6m-6 0H1"></path>
+              </svg>
+            </button>
+          )}
           {onUserInfo && (
             <button 
               onClick={onUserInfo} 
@@ -203,6 +226,7 @@ export function DateNavigation({ currentDate, onDateChange, hasEntry, onDateClic
           gap: 0.75rem;
         }
 
+        .settings-button,
         .user-button,
         .sign-out-button {
           width: 36px;
@@ -219,6 +243,7 @@ export function DateNavigation({ currentDate, onDateChange, hasEntry, onDateClic
           justify-content: center;
         }
 
+        .settings-button:hover,
         .user-button:hover,
         .sign-out-button:hover {
           border-color: var(--accent);

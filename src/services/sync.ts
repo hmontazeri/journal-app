@@ -1,13 +1,20 @@
 const SYNC_API_URL = 'https://journal-sync.mvlab.workers.dev';
-const API_KEY = import.meta.env.VITE_API_KEY || '';
+
+function getApiKey(): string {
+  // Priority: User-provided key > Embedded key > Empty
+  const userKey = localStorage.getItem('user_api_key');
+  const embeddedKey = import.meta.env.VITE_API_KEY || '';
+  return userKey || embeddedKey;
+}
 
 function getHeaders(): HeadersInit {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
   
-  if (API_KEY) {
-    headers['X-API-Key'] = API_KEY;
+  const apiKey = getApiKey();
+  if (apiKey) {
+    headers['X-API-Key'] = apiKey;
   }
   
   return headers;

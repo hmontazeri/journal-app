@@ -8,6 +8,7 @@ import { DateNavigation } from './components/DateNavigation';
 import { InsightsView } from './components/Stats/InsightsView';
 import { HistoryOverlay } from './components/HistoryOverlay';
 import { UserInfoDialog } from './components/UserInfoDialog';
+import { Settings } from './components/Settings';
 import { syncFromCloud } from './services/sync';
 import { syncQueue } from './services/syncQueue';
 import { hasDataChanged, markAsSynced, resetSyncTracking } from './services/syncOptimizer';
@@ -26,6 +27,7 @@ function App() {
   const [view, setView] = useState<'journal' | 'insights'>('journal');
   const [showHistoryOverlay, setShowHistoryOverlay] = useState(false);
   const [showUserInfo, setShowUserInfo] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [, setForceUpdate] = useState(0);
 
   // Check if vault exists and is unlocked
@@ -312,6 +314,7 @@ function App() {
           onDateClick={() => setShowHistoryOverlay(true)}
           onSignOut={handleResetVault}
           onUserInfo={() => setShowUserInfo(true)}
+          onSettings={() => setShowSettings(true)}
         />
       </div>
 
@@ -360,6 +363,10 @@ function App() {
               await reload();
             }}
           />
+        )}
+
+        {showSettings && (
+          <Settings onClose={() => setShowSettings(false)} />
         )}
       </div>
     );

@@ -423,6 +423,7 @@ export function JournalEntryComponent({ entry, onSave, onSync, allTags = [] }: J
         .editor-container {
           min-height: 400px;
           margin-bottom: 2rem;
+          position: relative;
         }
 
         .editor-container .ProseMirror {
@@ -440,6 +441,15 @@ export function JournalEntryComponent({ entry, onSave, onSync, allTags = [] }: J
         .editor-container .ProseMirror:focus {
           outline: none;
           border-color: var(--accent);
+        }
+
+        .word-count {
+          padding: 0.5rem 1rem;
+          text-align: right;
+          font-size: 0.8125rem;
+          color: var(--text-secondary);
+          font-family: var(--font-sans);
+          margin-top: 0.5rem;
         }
 
         .editor-container .ProseMirror p.is-editor-empty:first-child::before {

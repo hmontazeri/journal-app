@@ -59,7 +59,7 @@ export function DateNavigation({ currentDate, onDateChange, hasEntry, onDateClic
             <button 
               onClick={onSettings} 
               className="settings-button"
-              title="Settings"
+              title="Cloud Sync Settings"
             >
               <svg 
                 className="settings-icon" 
@@ -68,12 +68,11 @@ export function DateNavigation({ currentDate, onDateChange, hasEntry, onDateClic
                 viewBox="0 0 24 24" 
                 fill="none" 
                 stroke="currentColor" 
-                strokeWidth="2" 
+                strokeWidth="1.5" 
                 strokeLinecap="round" 
                 strokeLinejoin="round"
               >
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M12 1v6m0 6v6m10-7h-6m-6 0H1"></path>
+                <path d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z" />
               </svg>
             </button>
           )}

@@ -66,24 +66,37 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
       const response = await syncFromCloud(vaultId.trim());
       
       if (!response.success) {
-        setError('Failed to check vault. Please check your connection and try again.');
+        // Check if it's an authentication error
+        if (response.error?.includes('Unauthorized') || response.error?.includes('Invalid or missing API key')) {
+          setError('API key not configured. Please check the setup documentation.');
+          console.error('API key error:', response.error);
+        } else if (response.error?.includes('Rate limit')) {
+          setError('Rate limit exceeded. Please wait a moment and try again.');
+        } else {
+          setError('Failed to check vault. Please check your connection and try again.');
+          console.error('Sync error:', response.error);
+        }
         setCheckingVault(false);
         return;
       }
 
       if (response.data === null) {
-        // Vault doesn't exist
-        setError('Vault not found. Please check the vault ID and try again.');
+        // Vault doesn't exist OR vault is empty (new vault)
+        // This is actually okay - they might be connecting to a vault that hasn't synced yet
+        // Let them proceed to password entry
+        console.log('No cloud data found for vault, proceeding to password verification');
+        setVaultVerified(true);
         setCheckingVault(false);
         return;
       }
 
-      // Vault exists - proceed to password verification
+      // Vault exists with data - proceed to password verification
+      console.log('Vault found in cloud, proceeding to password verification');
       setVaultVerified(true);
       setCheckingVault(false);
     } catch (err) {
       setError('Failed to check vault. Please try again.');
-      console.error(err);
+      console.error('Vault check error:', err);
       setCheckingVault(false);
     }
   };

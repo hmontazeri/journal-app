@@ -65,14 +65,31 @@ export async function syncFromCloud(
     );
 
     if (!response.ok) {
-      throw new Error(`Sync failed: ${response.statusText}`);
+      const errorText = await response.text();
+      let errorMessage = `Sync failed: ${response.statusText}`;
+      
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error) {
+          errorMessage = errorJson.error;
+        }
+      } catch {
+        // If not JSON, use the text
+        if (errorText) {
+          errorMessage = errorText;
+        }
+      }
+      
+      throw new Error(errorMessage);
     }
 
     return await response.json();
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Sync from cloud error:', errorMessage);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: errorMessage,
     };
   }
 }
@@ -93,14 +110,31 @@ export async function deleteFromCloud(
     );
 
     if (!response.ok) {
-      throw new Error(`Delete failed: ${response.statusText}`);
+      const errorText = await response.text();
+      let errorMessage = `Delete failed: ${response.statusText}`;
+      
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error) {
+          errorMessage = errorJson.error;
+        }
+      } catch {
+        // If not JSON, use the text
+        if (errorText) {
+          errorMessage = errorText;
+        }
+      }
+      
+      throw new Error(errorMessage);
     }
 
     return await response.json();
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Delete from cloud error:', errorMessage);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: errorMessage,
     };
   }
 }

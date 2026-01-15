@@ -1,5 +1,3 @@
-import { JournalData } from '../types';
-
 const SYNC_API_URL = 'https://journal-sync.mvlab.workers.dev';
 
 export interface SyncResponse {

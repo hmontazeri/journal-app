@@ -10,7 +10,15 @@
     "tauri": "tauri",
     "worker:dev": "cd cloudflare-worker && npm run dev",
     "worker:deploy": "cd cloudflare-worker && npm run deploy",
-    "icons:generate": "node scripts/generate-icons.js && node scripts/generate-icns.js && node scripts/generate-ico.js"
+    "icons:generate": "node scripts/generate-icons.js && node scripts/generate-icns.js && node scripts/generate-ico.js",
+    "lint": "tsc --noEmit",
+    "version:update": "node scripts/update-version.cjs",
+    "version:check": "node scripts/check-version-sync.cjs",
+    "prepare": "husky",
+    "postversion": "node scripts/sync-version-from-package.cjs"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": "bash -c 'tsc --noEmit --project tsconfig.json'"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -28,6 +36,8 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "sharp": "^0.34.5",
     "typescript": "~5.8.3",
     "vite": "^7.0.4"

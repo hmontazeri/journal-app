@@ -1,4 +1,3 @@
-import { get } from '@tauri-apps/plugin-fs';
 import { VaultConfig, JournalData } from '../types';
 
 const VAULT_CONFIG_KEY = 'journal_vault_config';

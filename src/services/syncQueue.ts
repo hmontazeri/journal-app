@@ -11,10 +11,9 @@ interface QueuedSync {
 
 class SyncQueue {
   private queue: QueuedSync[] = [];
-  private syncTimer: NodeJS.Timeout | null = null;
+  private syncTimer: ReturnType<typeof setTimeout> | null = null;
   private isSyncing = false;
   private readonly DEBOUNCE_MS = 5000; // 5 seconds
-  private readonly MAX_BATCH_SIZE = 1; // Only keep latest sync (most efficient)
 
   /**
    * Add a sync request to the queue

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -21,6 +21,7 @@ export function JournalEntryComponent({ entry, onSave, onSync }: JournalEntryPro
   const [energyDrained, setEnergyDrained] = useState(entry.energyDrained || '');
   const [energyGained, setEnergyGained] = useState(entry.energyGained || '');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -47,19 +48,33 @@ export function JournalEntryComponent({ entry, onSave, onSync }: JournalEntryPro
   // Debounced save function - only syncs on user input
   const handleSave = useCallback(
     (updatedEntry: JournalEntry, shouldSync = false) => {
-      const timeoutId = setTimeout(() => {
+      // Clear any existing timeout to debounce properly
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      // Set new timeout
+      saveTimeoutRef.current = setTimeout(() => {
         onSave(updatedEntry);
         setLastSaved(new Date());
         // Only sync when explicitly requested (user typing, tags, etc.)
         if (shouldSync && onSync) {
           onSync();
         }
+        saveTimeoutRef.current = null;
       }, 3000); // 3 second debounce (reduced sync frequency)
-
-      return () => clearTimeout(timeoutId);
     },
     [onSave, onSync]
   );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (editor && entry.content !== editor.getHTML()) {
@@ -167,7 +182,9 @@ export function JournalEntryComponent({ entry, onSave, onSync }: JournalEntryPro
       <div className="entry-header">
         <h2 className="entry-date">{formatDateForDisplay(entry.date)}</h2>
         {lastSaved && (
-          <span className="save-indicator">Saved {lastSaved.toLocaleTimeString()}</span>
+          <span className="save-indicator" key={lastSaved.getTime()}>
+            Saved {lastSaved.toLocaleTimeString()}
+          </span>
         )}
       </div>
 
@@ -276,6 +293,18 @@ export function JournalEntryComponent({ entry, onSave, onSync }: JournalEntryPro
         .save-indicator {
           font-size: 0.875rem;
           color: var(--text-secondary);
+          animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-4px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .entry-title {

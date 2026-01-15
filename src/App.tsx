@@ -8,7 +8,7 @@ import { DateNavigation } from './components/DateNavigation';
 import { InsightsView } from './components/Stats/InsightsView';
 import { HistoryOverlay } from './components/HistoryOverlay';
 import { UserInfoDialog } from './components/UserInfoDialog';
-import { syncToCloud, syncFromCloud } from './services/sync';
+import { syncFromCloud } from './services/sync';
 import { syncQueue } from './services/syncQueue';
 import { hasDataChanged, markAsSynced, resetSyncTracking } from './services/syncOptimizer';
 import { encrypt, decrypt } from './utils/encryption';
@@ -18,7 +18,7 @@ import './App.css';
 
 function App() {
   const { vaultConfig, loading: vaultLoading, isUnlocked, unlock, reload: reloadVault, resetVault } = useVault();
-  const { journalData, currentDate, setCurrentDate, getCurrentEntry, getEntry, saveEntry, loading: journalLoading, reload } = useJournal();
+  const { journalData, currentDate, setCurrentDate, getCurrentEntry, saveEntry, loading: journalLoading, reload } = useJournal();
   const [password, setPassword] = useState<string | null>(null);
   const [unlockError, setUnlockError] = useState('');
   const [syncError, setSyncError] = useState<string | null>(null);

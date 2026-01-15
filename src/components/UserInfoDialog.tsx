@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
 import { VaultConfig } from '../types';
 import { useJournal } from '../hooks/useJournal';
-import { syncFromCloud, deleteFromCloud } from '../services/sync';
+import { deleteFromCloud } from '../services/sync';
 import { formatDateForDisplay } from '../utils/date';
 
 interface UserInfoDialogProps {

@@ -1,107 +1,90 @@
-# Journal - A Beautiful Minimalist Mac Journaling App
+# Journal
 
-A beautiful, minimalist Mac journaling app built with Tauri 2.0, React, and TypeScript. Features encrypted cloud sync via Cloudflare Workers.
+A beautiful minimalist daily journaling app for macOS, built with Tauri 2.0.
 
 ## Features
 
-- ✨ **Beautiful Minimalist UI** - Clean, distraction-free interface
-- 📝 **WYSIWYG Editor** - Rich text editing with TipTap
-- 😊 **Mood Tracking** - Scale (1-10) and emoji selection
-- 🏷️ **Tags** - Organize entries with tags
-- 🔒 **End-to-End Encryption** - AES-256-GCM encryption with PBKDF2 key derivation
-- ☁️ **Cloud Sync** - Sync across multiple Macs via Cloudflare Workers + R2
-- 📅 **Date Navigation** - Navigate between days seamlessly
-- 🎯 **Auto-Scroll** - Automatically opens today's entry
-
-## Prerequisites
-
-- **Rust** - [Install Rust](https://www.rust-lang.org/tools/install)
-- **Node.js** - v18 or higher
-- **Cloudflare Account** - For deploying the Worker (free tier is sufficient)
-
-## Setup
-
-### 1. Install Dependencies
-
-```bash
-npm install
-```
-
-### 2. Set Up Cloudflare Worker
-
-1. Install Wrangler CLI globally (if not already installed):
-```bash
-npm install -g wrangler
-```
-
-2. Login to Cloudflare:
-```bash
-cd cloudflare-worker
-npm install
-wrangler login
-```
-
-3. Deploy the worker:
-```bash
-npm run deploy
-```
-
-4. Update the sync URL in `src/services/sync.ts`:
-```typescript
-const SYNC_API_URL = 'https://your-worker.your-subdomain.workers.dev';
-```
-
-### 3. Run Development Server
-
-```bash
-npm run tauri dev
-```
-
-### 4. Build for Production
-
-```bash
-npm run tauri build
-```
-
-## Project Structure
-
-```
-journal/
-├── src/                    # React frontend
-│   ├── components/         # React components
-│   ├── hooks/              # Custom React hooks
-│   ├── services/           # API and storage services
-│   ├── types/              # TypeScript types
-│   └── utils/              # Utility functions
-├── src-tauri/              # Tauri backend (Rust)
-├── cloudflare-worker/      # Cloudflare Worker API
-└── app.md                  # Planning document
-```
-
-## Security
-
-- All journal data is encrypted client-side using AES-256-GCM
-- Encryption key is derived from user password using PBKDF2 (100,000 iterations)
-- Cloudflare Worker only stores encrypted blobs (never sees plaintext)
-- Vault ID stored encrypted in local storage
+- **Rich Text Editor** - Write with a WYSIWYG editor powered by TipTap
+- **Mood Tracking** - Track your mood on a scale of 1-10
+- **Tags** - Organize entries with tags
+- **Date Navigation** - Easily browse your journal history
+- **Secure Cloud Sync** - Client-side AES-256-GCM encryption with Cloudflare Workers + R2
+- **Offline First** - Works offline, syncs when online
+- **Beautiful Design** - Minimalist UI with elegant font pairing and dark mode support
+- **Cross-Device** - Sync between multiple Macs securely
 
 ## Development
 
-### Adding New Features
+### Prerequisites
 
-1. Update `app.md` with your feature plan
-2. Create components in `src/components/`
-3. Add hooks in `src/hooks/` if needed
-4. Update types in `src/types/`
+- Node.js 20+
+- Rust (latest stable)
+- Xcode Command Line Tools (macOS)
 
-### Testing Sync
+### Setup
 
-1. Create a vault on first Mac
-2. Note the Vault ID (shown after creation)
-3. On second Mac, select "Existing Vault" and enter the Vault ID
-4. Enter the same password
-5. Your entries should sync automatically
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run tauri dev
+```
+
+### Building
+
+```bash
+# Build for production
+npm run tauri build
+```
+
+## Cloudflare Worker Setup
+
+The app uses Cloudflare Workers + R2 for secure cloud sync:
+
+```bash
+# Deploy worker
+npm run worker:deploy
+```
+
+See `cloudflare-worker/README.md` for detailed setup instructions.
+
+## Version Management
+
+See [VERSIONING.md](./VERSIONING.md) for details on the automated version management system.
+
+Quick version bump:
+
+```bash
+# Bump version and create tag
+npm version patch -m "chore: release v%s"
+
+# Push to trigger release build
+git push origin main --tags
+```
+
+## Code Quality
+
+The project uses automated linting and type checking:
+
+- **Pre-commit hook** - TypeScript type checking before each commit
+- **Pre-push hook** - Version sync verification before push
+- **GitHub Actions CI** - Automated testing on every push
+
+## Release Process
+
+1. Update version: `npm version patch/minor/major`
+2. Push with tags: `git push origin main --tags`
+3. GitHub Actions automatically builds and publishes releases for all platforms
+
+## Architecture
+
+- **Frontend**: React + TypeScript
+- **Backend**: Tauri 2.0 (Rust)
+- **Cloud Sync**: Cloudflare Workers + R2
+- **Encryption**: Client-side AES-256-GCM, PBKDF2 key derivation
+- **Storage**: Local file system (macOS app data directory)
 
 ## License
 
-MIT
+Private project by Hamed Montazeri

@@ -1,4 +1,4 @@
-import { formatDateForDisplay, formatDateForSidebar, getTodayDateString, isToday, parseDateString, formatDateString } from '../utils/date';
+import { formatDateForSidebar, getTodayDateString, isToday, parseDateString, formatDateString } from '../utils/date';
 
 interface DateNavigationProps {
   currentDate: string;

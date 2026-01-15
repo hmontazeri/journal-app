@@ -1,5 +1,4 @@
 import { useJournal } from '../../hooks/useJournal';
-import { JournalEntry } from '../../types';
 import { formatDateForDisplay } from '../../utils/date';
 
 export function InsightsView() {

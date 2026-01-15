@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { JournalEntry, JournalData } from '../types';
-import { getTodayDateString, formatDateString } from '../utils/date';
+import { getTodayDateString } from '../utils/date';
 import { getLocalJournalData, saveLocalJournalData } from '../services/storage';
 import { generateUUID } from '../utils/encryption';
 

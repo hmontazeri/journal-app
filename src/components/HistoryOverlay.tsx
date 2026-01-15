@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { JournalData } from '../types';
-import { formatDateForDisplay, formatDateString, parseDateString, getTodayDateString, isToday } from '../utils/date';
+import { parseDateString, isToday } from '../utils/date';
 
 interface HistoryOverlayProps {
   journalData: JournalData | null;

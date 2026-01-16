@@ -18,7 +18,7 @@ import { JournalData } from './types';
 import './App.css';
 
 function App() {
-  const { vaultConfig, loading: vaultLoading, isUnlocked, unlock, lock, reload: reloadVault, resetVault } = useVault();
+  const { vaultConfig, loading: vaultLoading, isUnlocked, unlock, reload: reloadVault, resetVault } = useVault();
   const { journalData, currentDate, setCurrentDate, getCurrentEntry, saveEntry, loading: journalLoading, reload } = useJournal();
   const [password, setPassword] = useState<string | null>(null);
   const [unlockError, setUnlockError] = useState('');
@@ -29,6 +29,17 @@ function App() {
   const [showUserInfo, setShowUserInfo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [, setForceUpdate] = useState(0);
+
+  // Extract all unique tags from all entries for autocomplete
+  // Must be defined here (before any early returns) to maintain hooks order
+  const allTags = useMemo(() => {
+    if (!journalData) return [];
+    const tagSet = new Set<string>();
+    Object.values(journalData.entries).forEach(entry => {
+      entry.tags.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }, [journalData]);
 
   // Check if vault exists and is unlocked
   const needsVaultSetup = !vaultConfig && !vaultLoading;
@@ -269,16 +280,6 @@ function App() {
   const hasEntry = (date: string) => {
     return journalData?.entries[date] !== undefined;
   };
-
-  // Extract all unique tags from all entries for autocomplete
-  const allTags = useMemo(() => {
-    if (!journalData) return [];
-    const tagSet = new Set<string>();
-    Object.values(journalData.entries).forEach(entry => {
-      entry.tags.forEach(tag => tagSet.add(tag));
-    });
-    return Array.from(tagSet).sort();
-  }, [journalData]);
 
   return (
     <div className="app">

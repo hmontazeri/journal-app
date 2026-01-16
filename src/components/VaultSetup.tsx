@@ -99,16 +99,18 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
     }
 
     try {
-      // Check if vault exists in R2
-      const response = await syncFromCloud(vaultId.trim());
+      // Check if vault exists in R2 - pass backend config explicitly
+      const response = await syncFromCloud(vaultId.trim(), backendUrl, apiKey);
       
       if (!response.success) {
         // Check if it's an authentication error
         if (response.error?.includes('Unauthorized') || response.error?.includes('Invalid or missing API key')) {
-          setError('API key not configured. Please check the setup documentation.');
+          setError('Invalid API key or backend URL. Please check your configuration.');
           console.error('API key error:', response.error);
         } else if (response.error?.includes('Rate limit')) {
           setError('Rate limit exceeded. Please wait a moment and try again.');
+        } else if (response.error?.includes('Offline mode')) {
+          setError('Backend not configured. Please go back and enter your backend URL and API key.');
         } else {
           setError('Failed to check vault. Please check your connection and try again.');
           console.error('Sync error:', response.error);
@@ -154,15 +156,17 @@ export function VaultSetup({ onComplete }: VaultSetupProps) {
     }
 
     try {
-      // Fetch encrypted data to verify password
-      const response = await syncFromCloud(vaultId.trim());
+      // Fetch encrypted data to verify password - pass backend config explicitly
+      const response = await syncFromCloud(vaultId.trim(), backendUrl, apiKey);
       
       if (!response.success) {
         // Check specific error types
         if (response.error?.includes('Unauthorized') || response.error?.includes('Invalid or missing API key')) {
-          setError('API key not configured. Please check the setup documentation.');
+          setError('Invalid API key or backend URL. Please check your configuration.');
         } else if (response.error?.includes('Rate limit')) {
           setError('Rate limit exceeded. Please wait a moment and try again.');
+        } else if (response.error?.includes('Offline mode')) {
+          setError('Backend not configured. Please go back and enter your backend URL and API key.');
         } else {
           setError(`Failed to verify password: ${response.error || 'Unknown error'}`);
         }

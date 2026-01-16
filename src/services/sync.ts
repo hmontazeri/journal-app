@@ -59,7 +59,7 @@ export async function syncToCloud(
       };
     }
 
-    const response = await fetch(`${config.url}/sync/${vaultId}`, {
+    const response = await fetch(`${config.url}/api/sync?vaultId=${vaultId}`, {
       method: 'POST',
       headers: getHeaders(config.apiKey),
       body: JSON.stringify({ data: encryptedData }),
@@ -116,7 +116,7 @@ export async function syncFromCloud(
       };
     }
 
-    const response = await fetch(`${config.url}/sync/${vaultId}`, {
+    const response = await fetch(`${config.url}/api/sync?vaultId=${vaultId}`, {
       method: 'GET',
       headers: getHeaders(config.apiKey),
     });
@@ -172,7 +172,7 @@ export async function deleteFromCloud(
       };
     }
 
-    const response = await fetch(`${config.url}/sync/${vaultId}`, {
+    const response = await fetch(`${config.url}/api/sync?vaultId=${vaultId}`, {
       method: 'DELETE',
       headers: getHeaders(config.apiKey),
     });
